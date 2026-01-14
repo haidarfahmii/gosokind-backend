@@ -1,0 +1,288 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// generator client {
+//   provider = "prisma-client"
+//   output   = "../src/generated/prisma"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+// }
+
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+
+// Mengatur hak akses user
+enum Role {
+  SUPER_ADMIN
+  OUTLET_ADMIN
+  WORKER_WASHING
+  WORKER_IRONING
+  WORKER_PACKING
+  DRIVER
+  CUSTOMER
+}
+
+// Status pesanan yang sangat rinci untuk tracking
+enum OrderStatus {
+  // Pickup Flow
+  WAITING_FOR_PICKUP      // Driver belum ambil
+  PICKUP_ON_THE_WAY       // Driver sedang menjemput/bawa laundry ke outlet
+  ARRIVED_AT_OUTLET       // Sampai di outlet, Admin belum input berat/item
+
+  // Processing Flow (Setelah Admin input berat/qty)
+  WASHING                 // Sedang di station cuci (atau menunggu dicuci)
+  IRONING                 // Sedang di station setrika (atau menunggu disetrika)
+  PACKING                 // Sedang di station packing (atau menunggu dipacking)
+  
+  WAITING_FOR_PAYMENT     // Selesai packing, tapi belum lunas
+  READY_FOR_DELIVERY      // Selesai packing & lunas, siap diambil driver
+
+  // Delivery Flow
+  DELIVERY_ON_THE_WAY     // Driver membawa laundry ke customer
+  RECEIVED_BY_CUSTOMER    // Sampai di customer
+  COMPLETED               // Order selesai (setelah konfirmasi user/waktu habis)
+}
+
+enum StationType {
+  WASHING
+  IRONING
+  PACKING
+}
+
+// Status untuk request bypass worker
+enum BypassStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?   // Nullable karena bisa social login 
+  fullName      String
+  avatarUrl     String?   
+  isVerified    Boolean   @default(false) // Verifikasi email 
+  role          Role      @default(CUSTOMER)
+
+  // Relations
+  addresses     Address[]
+  outletId      String?
+  outlet        Outlet?   @relation(fields: [outletId], references: [id]) // Worker/Admin terikat outlet 
+
+  // Operational Relations
+  driverPickups    Order[]   @relation("DriverPickup")
+  driverDeliveries Order[]   @relation("DriverDelivery")
+  customerOrders   Order[]   @relation("CustomerOrder")
+  
+  attendances      Attendance[] // Absensi
+  bypassRequests   BypassRequest[] @relation("WorkerRequest")
+  handledStations  OrderStationProcess[] // History pekerjaan worker 
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@map("users")
+}
+
+model Address {
+  id          String  @id @default(cuid())
+  label       String  // e.g. "Rumah", "Kantor"
+  address     String  // Alamat lengkap
+  latitude    Float   // Untuk hitung jarak
+  longitude   Float   
+  isPrimary   Boolean @default(false)
+  
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relasi ke order agar data alamat historis terjaga
+  ordersAsPickup   Order[] @relation("PickupAddress")
+  ordersAsDelivery Order[] @relation("DeliveryAddress")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@map("addresses")
+}
+
+model Outlet {
+  id          String  @id @default(cuid())
+  name        String
+  address     String
+  latitude    Float   
+  longitude   Float   
+
+  // Relations
+  users       User[]  // Karyawan di outlet ini
+  orders      Order[] // Pesanan di outlet ini
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  
+  @@map("outlets")
+}
+
+// Master data jenis pakaian
+model LaundryItem {
+  id          String  @id @default(cuid())
+  name        String  // e.g. Kaos, Celana
+  
+  // Relations
+  orderItems      OrderItem[]
+  stationChecks   StationItemCheck[] 
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@map("laundry_items")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique // Format: INV-YYYYMMXXX
+  
+  totalWeight     Float?      // Diinput Outlet Admin 
+  totalPrice      Float?      
+  isPaid          Boolean     @default(false)
+
+  // Payment info untuk Payment Gateway
+  paymentUrl    String?   // Link pembayaran dari Midtrans/Xendit
+  paymentMethod String?   // e.g. "BCA_VA", "GOPAY"
+  
+  status          OrderStatus @default(WAITING_FOR_PICKUP)
+  
+  // Relations
+  customerId      String
+  customer        User        @relation("CustomerOrder", fields: [customerId], references: [id])
+  
+  outletId        String?
+  outlet          Outlet?     @relation(fields: [outletId], references: [id]) 
+
+  // Driver pickup dan delivery bisa berbeda orang
+  pickupDriverId  String?
+  pickupDriver    User?       @relation("DriverPickup", fields: [pickupDriverId], references: [id])
+
+  deliveryDriverId String?
+  deliveryDriver  User?       @relation("DriverDelivery", fields: [deliveryDriverId], references: [id])
+
+  // Snapshot alamat saat order dibuat
+  pickupAddressId String
+  pickupAddress   Address     @relation("PickupAddress", fields: [pickupAddressId], references: [id])
+
+  deliveryAddressId String
+  deliveryAddress   Address   @relation("DeliveryAddress", fields: [deliveryAddressId], references: [id])
+
+  // Data Detail
+  orderItems      OrderItem[]          // Data Qty "Resmi" dari Admin
+  stationProcesses OrderStationProcess[] // Progress pengerjaan
+  bypassRequests   BypassRequest[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  @@map("orders")
+}
+
+// Menyimpan Qty yang diinput Admin (Acuan Kebenaran)
+model OrderItem {
+  id            String      @id @default(cuid())
+  orderId       String
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  laundryItemId String
+  laundryItem   LaundryItem @relation(fields: [laundryItemId], references: [id])
+  
+  quantity      Int         // Jumlah item resmi
+
+  @@map("order_items")
+}
+
+// Mencatat siapa yang mengerjakan station apa & kapan
+model OrderStationProcess {
+  id            String      @id @default(cuid())
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  station       StationType
+  workerId      String
+  worker        User          @relation(fields: [workerId], references: [id])
+  
+  startedAt     DateTime      @default(now())
+  completedAt   DateTime?
+
+  // Hasil hitungan worker disimpan di sini
+  itemChecks    StationItemCheck[] 
+  
+  @@map("order_station_processes")
+}
+
+// Menyimpan input hitungan Worker untuk divalidasi 
+model StationItemCheck {
+  id              String      @id @default(cuid())
+  processId       String
+  process         OrderStationProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  laundryItemId   String
+  laundryItem     LaundryItem @relation(fields: [laundryItemId], references: [id])
+  
+  inputQuantity   Int         // Qty versi worker
+
+  @@map("station_item_checks")
+}
+
+// Request jika hitungan worker beda dengan admin 
+model BypassRequest {
+  id            String        @id @default(cuid())
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id])
+  
+  workerId      String
+  worker        User          @relation("WorkerRequest", fields: [workerId], references: [id])
+  
+  station       StationType
+  reason        String        // Keterangan problem
+  status        BypassStatus  @default(PENDING)
+  
+  adminNote     String?       // Catatan admin saat approve/reject
+  reviewedBy    String?       // ID Admin yang review
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("bypass_requests")
+}
+
+// Absensi Harian
+model Attendance {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  
+  clockIn       DateTime  @default(now()) 
+  clockOut      DateTime?
+  
+  date          DateTime  @db.Date // Untuk query laporan per hari
+  
+  @@map("attendances")
+}
