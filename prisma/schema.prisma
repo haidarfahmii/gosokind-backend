@@ -26,15 +26,14 @@ datasource db {
 
 // --- ENUMS ---
 
-// Mengatur hak akses user
-enum Role {
+// Mengatur hak akses employee
+enum EmployeeRole {
   SUPER_ADMIN
   OUTLET_ADMIN
   WORKER_WASHING
   WORKER_IRONING
   WORKER_PACKING
   DRIVER
-  CUSTOMER
 }
 
 // Status pesanan yang sangat rinci untuk tracking
@@ -71,26 +70,47 @@ enum BypassStatus {
   REJECTED
 }
 
-model User {
+model Customer {
   id            String    @id @default(cuid())
   email         String    @unique
   password      String?   // Nullable karena bisa social login 
   fullName      String
-  avatarUrl     String?   
-  isVerified    Boolean   @default(false) // Verifikasi email 
-  role          Role      @default(CUSTOMER)
-
+  avatarUrl     String?
+  isVerified    Boolean   @default(false) // Verifikasi email
+  
+  // Social Login
+  provider      String?   // Contoh: "google"
+  providerId    String?   // ID unik dari Google (cth: "123445...")
+  
   // Relations
   addresses     Address[]
-  outletId      String?
-  outlet        Outlet?   @relation(fields: [outletId], references: [id]) // Worker/Admin terikat outlet 
+  orders        Order[]   @relation("CustomerOrder")
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
 
+  @@map("customers")
+}
+
+model Employee {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  password      String       
+  fullName      String
+  avatarUrl     String?
+  
+  role          EmployeeRole 
+
+  // Relations
+  outletId      String?      // Super Admin tidak memiliki outlet, tapi yang lain nya ada
+  outlet        Outlet?      @relation(fields: [outletId], references: [id])
+  
   // Operational Relations
   driverPickups    Order[]   @relation("DriverPickup")
   driverDeliveries Order[]   @relation("DriverDelivery")
-  customerOrders   Order[]   @relation("CustomerOrder")
   
-  attendances      Attendance[] // Absensi
+  attendances      Attendance[]    // Absen sekarang khusus employee saja
   bypassRequests   BypassRequest[] @relation("WorkerRequest")
   handledStations  OrderStationProcess[] // History pekerjaan worker 
 
@@ -98,7 +118,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  @@map("users")
+  @@map("employees")
 }
 
 model Address {
@@ -108,13 +128,12 @@ model Address {
   latitude    Float   // Untuk hitung jarak
   longitude   Float   
   isPrimary   Boolean @default(false)
-  
-  userId      String
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relasi ke order agar data alamat historis terjaga
-  ordersAsPickup   Order[] @relation("PickupAddress")
-  ordersAsDelivery Order[] @relation("DeliveryAddress")
+  // UPDATED: Address now belongs strictly to Customer
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  orders          Order[]     // Tidak perlu relation name jika hanya ada satu relasi ke Order
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -131,7 +150,7 @@ model Outlet {
   longitude   Float   
 
   // Relations
-  users       User[]  // Karyawan di outlet ini
+  employees   Employee[]  // Karyawan di outlet ini
   orders      Order[] // Pesanan di outlet ini
 
   createdAt   DateTime @default(now())
@@ -173,24 +192,20 @@ model Order {
   
   // Relations
   customerId      String
-  customer        User        @relation("CustomerOrder", fields: [customerId], references: [id])
+  customer        Customer    @relation("CustomerOrder", fields: [customerId], references: [id])
   
   outletId        String?
   outlet          Outlet?     @relation(fields: [outletId], references: [id]) 
 
   // Driver pickup dan delivery bisa berbeda orang
   pickupDriverId  String?
-  pickupDriver    User?       @relation("DriverPickup", fields: [pickupDriverId], references: [id])
+  pickupDriver    Employee?   @relation("DriverPickup", fields: [pickupDriverId], references: [id])
 
   deliveryDriverId String?
-  deliveryDriver  User?       @relation("DriverDelivery", fields: [deliveryDriverId], references: [id])
+  deliveryDriver  Employee?   @relation("DriverDelivery", fields: [deliveryDriverId], references: [id])
 
-  // Snapshot alamat saat order dibuat
-  pickupAddressId String
-  pickupAddress   Address     @relation("PickupAddress", fields: [pickupAddressId], references: [id])
-
-  deliveryAddressId String
-  deliveryAddress   Address   @relation("DeliveryAddress", fields: [deliveryAddressId], references: [id])
+  addressId       String
+  address         Address     @relation(fields: [addressId], references: [id])
 
   // Data Detail
   orderItems      OrderItem[]          // Data Qty "Resmi" dari Admin
@@ -223,10 +238,10 @@ model OrderStationProcess {
   id            String      @id @default(cuid())
   orderId       String
   order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
   station       StationType
+
   workerId      String
-  worker        User          @relation(fields: [workerId], references: [id])
+  worker        Employee      @relation(fields: [workerId], references: [id])
   
   startedAt     DateTime      @default(now())
   completedAt   DateTime?
@@ -258,7 +273,7 @@ model BypassRequest {
   order         Order         @relation(fields: [orderId], references: [id])
   
   workerId      String
-  worker        User          @relation("WorkerRequest", fields: [workerId], references: [id])
+  worker        Employee      @relation("WorkerRequest", fields: [workerId], references: [id])
   
   station       StationType
   reason        String        // Keterangan problem
@@ -276,8 +291,9 @@ model BypassRequest {
 // Absensi Harian
 model Attendance {
   id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id])
+  
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id])
   
   clockIn       DateTime  @default(now()) 
   clockOut      DateTime?
