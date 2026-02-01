@@ -6,8 +6,6 @@ export const registerValidator = [
         .isEmail().withMessage("Invalid email format")
 ]
 export const verifyValidator = [
-    query("token")
-        .notEmpty().withMessage("Token is required"),
     body("fullName")
         .notEmpty().withMessage("Full Name is Required")
         .isString().withMessage("Fullname must be a string"),

@@ -19,9 +19,9 @@ export const authController = {
 
     async verify(req: Request, res:Response) {
         const { fullName, password } = req.body;
-        const token  = req.query.token as string;
+        const { userId } = res?.locals?.payload;
 
-        await authService.verify({ token, fullName, password });
+        await authService.verify({ userId, fullName, password });
 
         res.status(200).json({
             success: true,
@@ -30,6 +30,18 @@ export const authController = {
                 fullName,
                 password
             }
+        })
+    },
+
+    async login(req:Request, res:Response) {
+        const { email, password } = req.body;
+
+        const user = await authService.login({ email, password })
+
+        res.status(200).json({
+            success: true,
+            message: "Login successfully",
+            data: user
         })
     }
 }

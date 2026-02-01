@@ -1,4 +1,4 @@
-import { JWTPayload, RegisterInput, VerifyInput } from "../@types"
+import { AuthResponse, JWTPayload, LoginInput, RegisterInput, VerifyInput } from "../@types"
 import prisma from "../config/prisma.config"
 import { AppError } from "../utils/app-error";
 import { createToken, verifyToken } from "../utils/jwt.util";
@@ -8,7 +8,7 @@ import { JWT_SECRET } from "../config/index.config";
 import jwt from "jsonwebtoken";
 
 export const authService = {
-    async register(input: RegisterInput): Promise<{token: string}> {
+    async register(input: RegisterInput): Promise<{ token: string }> {
         const { email } = input;
         // cek jika user sudah ada
         const existingUser = await prisma.customer.findUnique({
@@ -32,7 +32,7 @@ export const authService = {
         const secretKey = JWT_SECRET || "purwadhika-gosokind-laundry-jcwdbsd36";
 
         const verificationToken = jwt.sign(
-            { id: newUser.id },
+            { userId: newUser.id },
             secretKey,
             { expiresIn: "1h" }
         );
@@ -51,24 +51,14 @@ export const authService = {
             },
         });
 
-        // KEMBALIKAN TOKEN DAN EMAIL DI SINI
+        // token dikembalikan
         return {
             token: verificationToken
         };
     },
 
     async verify(input: VerifyInput): Promise<void> {
-        const { token, fullName, password } = input;
-
-        const secretKey = JWT_SECRET || "purwadhika-gosokind-laundry-jcwdbsd36";
-        let decodedPayload: any;
-        try {
-            decodedPayload = jwt.verify(token, secretKey);
-        } catch (error) {
-            throw AppError("Invalid or expired verification token", 400);
-        }
-
-        const userId = decodedPayload.id;
+        const { userId, fullName, password } = input;
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -80,5 +70,42 @@ export const authService = {
                 isVerified: true,
             },
         });
+    },
+
+    async login(input: LoginInput): Promise<AuthResponse> {
+        const { email, password } = input;
+        // validasi email
+        const findUser = await prisma.customer.findUnique({
+            where: { email }
+        })
+        if (!findUser) { throw AppError("Email or Password is Invalid!", 400) }
+        // validasi password
+        const isPasswordValid = await bcrypt.compare(password, findUser.password!);
+        if (!isPasswordValid) { throw AppError("Email or Password is Invalid!", 400)}
+        // validasi verifikasi
+        if (!findUser.isVerified) {throw AppError("Please verify your account!", 403)}
+
+        // token
+        const secretKey = JWT_SECRET || "purwadhika-gosokind-laundry-jcwdbsd36";
+        const token = await createToken(
+            {
+                userId: findUser.id,
+                email: findUser.email
+            },
+            secretKey,
+            {
+                expiresIn: "24h"
+            }
+        );
+
+        return{
+            token,
+            user: {
+                id: findUser?.id,
+                name: findUser.fullName,
+                email: findUser?.email,
+                avatarUrl: findUser.avatarUrl
+            },
+        };
     }
 }  
