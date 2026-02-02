@@ -14,25 +14,30 @@ export const authService = {
         const existingUser = await prisma.customer.findUnique({
             where: { email, },
         });
-        if (existingUser) {
+        // cek jika user sudah verified
+        if (existingUser && existingUser.isVerified) {
             throw AppError("User already exists", 400);
         }
 
-        const tempName = email.split("@")[0];
-
-        const newUser = await prisma.customer.create({
-            data: {
-                email,
-                fullName: tempName,
-                isVerified: false,
-                password: null,
-            },
-        });
+        let user;
+        // cek jika user ada tapi belom verified
+        if (existingUser && !existingUser.isVerified) {
+            user = existingUser;
+        } else {
+            const tempName = email.split("@")[0];
+            user = await prisma.customer.create({
+                data: {
+                    email,
+                    fullName: tempName,
+                    isVerified: false,
+                    password: null,
+                },
+            });
+        }
 
         const secretKey = JWT_SECRET || "purwadhika-gosokind-laundry-jcwdbsd36";
-
         const verificationToken = jwt.sign(
-            { userId: newUser.id },
+            { userId: user.id },
             secretKey,
             { expiresIn: "1h" }
         );
@@ -50,7 +55,6 @@ export const authService = {
                 year: new Date().getFullYear(),
             },
         });
-
         // token dikembalikan
         return {
             token: verificationToken
