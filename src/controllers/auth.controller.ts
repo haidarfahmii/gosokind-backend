@@ -43,5 +43,35 @@ export const authController = {
             message: "Login successfully",
             data: user
         })
-    }
+    },
+
+    async forgotPassword(req: Request, res: Response) {
+        const { email } = req.body;
+        const data = await authService.forgotPassword(email);
+
+        res.status(200).json({
+            success: true,
+            message: "Forgot password link has been sent to your email",
+            data: {
+                email: email,
+                token: data.token
+            }
+        })
+    },
+
+    async resetPassword(req: Request, res: Response) {
+        const { password } = req.body;
+        const { userId } = res?.locals?.payload;
+
+        await authService.resetPassword(userId, password);
+
+        res.status(200).json({
+            success: true,
+            message: "Password has been reset successfully",
+            data: {
+                userId,
+                password
+            }
+        })
+    },
 }

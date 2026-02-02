@@ -81,9 +81,9 @@ export const authService = {
         if (!findUser) { throw AppError("Email or Password is Invalid!", 400) }
         // validasi password
         const isPasswordValid = await bcrypt.compare(password, findUser.password!);
-        if (!isPasswordValid) { throw AppError("Email or Password is Invalid!", 400)}
+        if (!isPasswordValid) { throw AppError("Email or Password is Invalid!", 400) }
         // validasi verifikasi
-        if (!findUser.isVerified) {throw AppError("Please verify your account!", 403)}
+        if (!findUser.isVerified) { throw AppError("Please verify your account!", 403) }
 
         // token
         const secretKey = JWT_SECRET || "purwadhika-gosokind-laundry-jcwdbsd36";
@@ -98,7 +98,7 @@ export const authService = {
             }
         );
 
-        return{
+        return {
             token,
             user: {
                 id: findUser?.id,
@@ -107,5 +107,48 @@ export const authService = {
                 avatarUrl: findUser.avatarUrl
             },
         };
+    },
+
+    async forgotPassword(email: string): Promise<{ token: string }> {
+        const user = await prisma.customer.findUnique({ where: { email } });
+
+        if (!user) {
+            throw AppError("User with this email does not exist", 404);
+        }
+
+        const secretKey = JWT_SECRET!;
+
+        const resetToken = jwt.sign(
+            { userId: user.id, email: user.email },
+            secretKey,
+            { expiresIn: "15m" }
+        );
+
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+        await mailService.sendMail({
+            to: email,
+            subject: "Reset Your Password - Gosokind",
+            template: "forgot-password.html",
+            context: {
+                name: user.fullName || email,
+                resetLink: resetLink,
+                year: new Date().getFullYear(),
+            },
+        });
+
+        return {
+            token: resetToken
+        };
+    },
+
+    async resetPassword(userId: string, password: string): Promise<void> {
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await prisma.customer.update({
+            where: { id: userId },
+            data: { password: hashedPassword },
+        });
     }
 }  
