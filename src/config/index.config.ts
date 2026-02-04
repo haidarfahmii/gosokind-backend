@@ -11,3 +11,9 @@ export const GOOGLE_APP_PASSWORD = process.env.GOOGLE_APP_PASSWORD;
 
 // JWT Secret Key
 export const JWT_SECRET = process.env.JWT_SECRET
+
+// WHITELIST
+export const WHITELIST = [process.env.WHITELIST || "http://localhost:3000"];
+
+// NextAuth
+export const NEXT_AUTH_SECRET_KEY = process.env.NEXT_AUTH_SECRET_KEY;
