@@ -43,7 +43,7 @@ export const authService = {
         );
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const verificationLink = `${frontendUrl}/verify-email/${verificationToken}`;
+        const verificationLink = `${frontendUrl}/auth/verify-email/${verificationToken}`;
 
         await mailService.sendMail({
             to: email,
@@ -129,7 +129,7 @@ export const authService = {
         );
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const resetLink = `${frontendUrl}/reset-password/${resetToken}`;
+        const resetLink = `${frontendUrl}/auth/reset-password/${resetToken}`;
 
         await mailService.sendMail({
             to: email,
