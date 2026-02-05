@@ -29,13 +29,18 @@ router.post("/forgot-password",
     forgotPasswordValidator,
     expressValidator,
     authController.forgotPassword
-)
+);
 
 router.post("/reset-password",
     verifyToken(JWT_SECRET!),
     resetPasswordValidator,
     expressValidator,
     authController.resetPassword
-)
+);
+
+router.get("/verify-token",
+    verifyToken(JWT_SECRET!), // Middleware ini yang akan mengecek expired/invalid
+    authController.checkToken
+);
 
 export default router;

@@ -17,7 +17,7 @@ export const authController = {
         })
     },
 
-    async verify(req: Request, res:Response) {
+    async verify(req: Request, res: Response) {
         const { fullName, password } = req.body;
         const { userId } = res?.locals?.payload;
 
@@ -33,7 +33,7 @@ export const authController = {
         })
     },
 
-    async login(req:Request, res:Response) {
+    async login(req: Request, res: Response) {
         const { email, password } = req.body;
 
         const user = await authService.login({ email, password })
@@ -73,5 +73,14 @@ export const authController = {
                 password
             }
         })
+    },
+
+    async checkToken(req: Request, res: Response) {
+        // Jika request sampai di sini, berarti sudah lolos middleware verifyToken
+        // Artinya token valid & tidak expired
+        res.status(200).json({
+            success: true,
+            message: "Token is valid",
+        });
     },
 }
