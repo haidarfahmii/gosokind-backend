@@ -94,7 +94,8 @@ export const authService = {
         const token = await createToken(
             {
                 userId: findUser.id,
-                email: findUser.email
+                email: findUser.email,
+                role: "CUSTOMER"
             },
             secretKey,
             {
@@ -108,7 +109,8 @@ export const authService = {
                 id: findUser?.id,
                 name: findUser.fullName,
                 email: findUser?.email,
-                avatarUrl: findUser.avatarUrl
+                avatarUrl: findUser.avatarUrl,
+                role: "CUSTOMER"
             },
         };
     },

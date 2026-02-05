@@ -20,10 +20,12 @@ export interface AuthResponse {
     name: string;
     email: string;
     avatarUrl: string | null;
+    role: string;
   };
 }
 
 export interface JWTPayload {
     userId: string;
     email: string;
+    role: string;
 }
