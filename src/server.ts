@@ -21,14 +21,22 @@ app.use("/api/auth", authRouter)
 /*
   Middleware (Application Level)
 */
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.log(err.message);
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const statusCode = err?.statusCode ? err?.statusCode : 500;
-  const message = err?.isOperational
-    ? err?.message
-    : err.message === 'File too large'
-      ? err.message
-      : 'Something went wrong!';
+  const message = err?.isOperational ? err?.message : "Something went wrong!";
+
+  // Log error untuk debugging di server
+  console.error("❌ Error:", err);
+
+  // Handle Prisma Validation / Database Errors
+  if (err.code === "P2002") {
+    // Unique constraint violation
+    return res.status(409).json({
+      success: false,
+      message: "Data already exists (Unique constraint violation)",
+      data: null,
+    });
+  }
 
   res.status(statusCode).json({
     success: false,
