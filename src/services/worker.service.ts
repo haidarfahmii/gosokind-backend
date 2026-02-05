@@ -28,7 +28,7 @@ export const processStationOrder = async (payload: ProcessOrderPayload) => {
 
   for (const inputItem of items) {
     const dbItem = orderItems.find(
-      (oi) => oi.laundryItemId === inputItem.laundryItemId
+      (oi: typeof orderItems[0]) => oi.laundryItemId === inputItem.laundryItemId
     );
 
     if (!dbItem) {
