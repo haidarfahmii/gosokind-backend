@@ -21,6 +21,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "geolib": "^3.3.4",
     "jsonwebtoken": "^9.0.3",
     "node-fetch": "^2.7.0",
     "pg": "^8.17.2",

@@ -1,53 +1,78 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import * as workerService from "../services/worker.service";
-import { StationType } from "../generated/prisma/client";
+import { StationType, EmployeeRole } from "../generated/prisma/client";
 
 const processOrderSchema = z.object({
-  orderId: z.string(),
-  workerId: z.string(),
+  orderId: z.string().cuid(),
   station: z.nativeEnum(StationType),
-  items: z.array(
-    z.object({
-      laundryItemId: z.string(),
-      quantity: z.number().int().nonnegative(),
-    })
-  ),
+  items: z.array(z.object({
+    laundryItemId: z.string(),
+    quantity: z.number().int().min(0)
+  })).nonempty()
 });
+
+//  Worker melihat daftar pesanan yang MASUK ke stationnya
+export const getOrderList = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const { page, limit } = parsePagination(req.query);
+    const station = mapRoleToStation(user.role); 
+    
+    if (!station) return res.status(400).json({ success: false, message: "Invalid Worker Role" });
+
+    const result = await workerService.getIncomingOrders(station, page, limit);
+    res.json({ success: true, ...result });
+  } catch (error) { handleError(res, error); }
+};
+
+//  Worker melihat history pekerjaan pribadi
+export const getJobHistory = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { page, limit } = parsePagination(req.query);
+    
+    const result = await workerService.getWorkerHistory(userId, page, limit);
+    res.json({ success: true, ...result });
+  } catch (error) { handleError(res, error); }
+};
 
 export const processOrder = async (req: Request, res: Response) => {
   try {
-    const payload = processOrderSchema.parse(req.body);
+    const userId = (req as any).user?.userId;
+    const { orderId, station, items } = processOrderSchema.parse(req.body);
 
-    const result = await workerService.processStationOrder(payload);
-
-    res.json({
-      success: true,
-      data: result,
+    const result = await workerService.processStationOrder({
+      workerId: userId, orderId, station, items
     });
-  } catch (error: any) { // Type 'any' used to safely access message property
-    if (error.message === "QTY_MISMATCH") {
-      res.status(400).json({
-        success: false,
-        code: "QTY_MISMATCH",
-        message: "Quantity mismatch between input and system records.",
-      });
-      return; // Ensure return
-    }
 
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        message: "Validation Error",
-        errors: (error as any).errors,
-      });
-      return;
-    }
-
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
+    res.json({ success: true, message: "Order processed successfully", data: result });
+  } catch (error) { handleError(res, error); }
 };
+
+// --- HELPERS ---
+
+const parsePagination = (query: any) => {
+  const page = parseInt(query.page as string) || 1;
+  const limit = parseInt(query.limit as string) || 10;
+  return { page, limit };
+};
+
+function mapRoleToStation(role: string): StationType | null {
+  if (role === EmployeeRole.WORKER_WASHING) return StationType.WASHING;
+  if (role === EmployeeRole.WORKER_IRONING) return StationType.IRONING;
+  if (role === EmployeeRole.WORKER_PACKING) return StationType.PACKING;
+  return null;
+}
+
+function handleError(res: Response, error: any) {
+  if (error instanceof z.ZodError) {
+    return res.status(400).json({ success: false, errors: error.issues });
+  }
+  const statusMap: Record<string, number> = {
+    "QTY_MISMATCH": 400,
+    "ORDER_NOT_FOUND": 404
+  };
+  const status = statusMap[error.message] || 500;
+  res.status(status).json({ success: false, message: error.message });
+}

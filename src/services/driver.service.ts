@@ -1,31 +1,91 @@
 import { prisma } from "../lib/prisma";
 import { OrderStatus } from "../generated/prisma/client";
 
+// --- PUBLIC METHODS ---
+
 export const checkAvailability = async (driverId: string) => {
-  // Logic: Driver is available if they are NOT currently handling an ACTIVE job.
-  // Active jobs for driver = PICKUP_ON_THE_WAY (as pickupDriver) OR DELIVERY_ON_THE_WAY (as deliveryDriver)
-  
-  const activePickup = await prisma.order.findFirst({
-    where: {
-      pickupDriverId: driverId,
-      status: OrderStatus.PICKUP_ON_THE_WAY,
-    },
-  });
-
-  if (activePickup) {
-    return { available: false, reason: "Currently handling a pickup" };
+  const activeJob = await getActiveJob(driverId);
+  if (activeJob) {
+    return { available: false, reason: "DRIVER_BUSY" };
   }
-
-  const activeDelivery = await prisma.order.findFirst({
-    where: {
-      deliveryDriverId: driverId,
-      status: OrderStatus.DELIVERY_ON_THE_WAY,
-    },
-  });
-
-  if (activeDelivery) {
-    return { available: false, reason: "Currently handling a delivery" };
-  }
-
   return { available: true };
+};
+
+export const acceptPickup = async (driverId: string, orderId: string) => {
+  await ensureDriverIdle(driverId);
+
+  // ATOMIC LOCK: Update hanya jika status masih WAITING dan Driver NULL
+  const res = await prisma.order.updateMany({
+    where: {
+      id: orderId,
+      status: OrderStatus.WAITING_FOR_PICKUP, // [cite: 65]
+      pickupDriverId: null, // Mencegah race condition
+    },
+    data: { pickupDriverId: driverId, status: OrderStatus.PICKUP_ON_THE_WAY }, // [cite: 67]
+  });
+
+  if (res.count === 0) throw new Error("ORDER_UNAVAILABLE");
+  return { success: true };
+};
+
+export const completePickup = async (driverId: string, orderId: string) => {
+  // Verifikasi driver yang request adalah driver yang ambil order
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, pickupDriverId: driverId, status: OrderStatus.PICKUP_ON_THE_WAY },
+  });
+  
+  if (!order) throw new Error("ORDER_NOT_FOUND_OR_INVALID");
+
+  return await prisma.order.update({
+    where: { id: orderId },
+    data: { status: OrderStatus.ARRIVED_AT_OUTLET }, // [cite: 69]
+  });
+};
+
+export const acceptDelivery = async (driverId: string, orderId: string) => {
+  await ensureDriverIdle(driverId);
+
+  const res = await prisma.order.updateMany({
+    where: {
+      id: orderId,
+      status: OrderStatus.READY_FOR_DELIVERY, // [cite: 79]
+      deliveryDriverId: null,
+    },
+    data: { deliveryDriverId: driverId, status: OrderStatus.DELIVERY_ON_THE_WAY }, // [cite: 81]
+  });
+
+  if (res.count === 0) throw new Error("ORDER_UNAVAILABLE");
+  return { success: true };
+};
+
+export const completeDelivery = async (driverId: string, orderId: string) => {
+   // Driver menyelesaikan tugas delivery
+   const order = await prisma.order.findFirst({
+    where: { id: orderId, deliveryDriverId: driverId, status: OrderStatus.DELIVERY_ON_THE_WAY },
+  });
+
+  if (!order) throw new Error("ORDER_NOT_FOUND_OR_INVALID");
+
+  return await prisma.order.update({
+    where: { id: orderId },
+    data: { status: OrderStatus.RECEIVED_BY_CUSTOMER }, // [cite: 83]
+  });
+};
+
+// --- PRIVATE HELPERS (<15 Lines) ---
+
+const getActiveJob = async (driverId: string) => {
+  return await prisma.order.findFirst({
+    where: {
+      OR: [
+        { pickupDriverId: driverId, status: OrderStatus.PICKUP_ON_THE_WAY },
+        { deliveryDriverId: driverId, status: OrderStatus.DELIVERY_ON_THE_WAY },
+      ],
+    },
+  });
+};
+
+const ensureDriverIdle = async (driverId: string) => {
+  const active = await getActiveJob(driverId);
+  if (active) throw new Error("DRIVER_BUSY"); // [cite: 37, 234]
 };

@@ -1,76 +1,111 @@
 import { prisma } from "../lib/prisma";
-import { StationType } from "../generated/prisma/client";
+import { StationType, OrderStatus } from "../generated/prisma/client";
 
 interface ProcessOrderPayload {
   orderId: string;
   workerId: string;
   station: StationType;
-  items: {
-    laundryItemId: string;
-    quantity: number;
-  }[];
+  items: { laundryItemId: string; quantity: number }[];
 }
+
+// --- PUBLIC METHODS ---
+
+// [cite: 240, 241] Melihat daftar pesanan yang MASUK ke station
+export const getIncomingOrders = async (station: StationType, page: number, limit: number) => {
+  const targetStatus = getStatusForStation(station);
+  if (!targetStatus) return { data: [], meta: { page, limit, total: 0, lastPage: 0 } };
+
+  const [data, total] = await prisma.$transaction([
+    prisma.order.findMany({
+      where: { status: targetStatus },
+      include: { orderItems: { include: { laundryItem: true } } },
+      orderBy: { createdAt: 'asc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.order.count({ where: { status: targetStatus } })
+  ]);
+
+  return { data, meta: { page, limit, total, lastPage: Math.ceil(total / limit) } };
+};
+
+//  Melihat history pekerjaan worker
+export const getWorkerHistory = async (workerId: string, page: number, limit: number) => {
+  const [data, total] = await prisma.$transaction([
+    prisma.orderStationProcess.findMany({
+      where: { workerId },
+      include: { order: true },
+      orderBy: { completedAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.orderStationProcess.count({ where: { workerId } })
+  ]);
+
+  return { data, meta: { page, limit, total, lastPage: Math.ceil(total / limit) } };
+};
 
 export const processStationOrder = async (payload: ProcessOrderPayload) => {
   const { orderId, workerId, station, items } = payload;
+  const dbOrderItems = await fetchOrderItems(orderId);
+  
+  validateItemQuantities(items, dbOrderItems);
 
-  // 1. Fetch official Order Items
-  const orderItems = await prisma.orderItem.findMany({
-    where: { orderId },
-  });
+  return await createStationProcess(orderId, workerId, station, items);
+};
 
-  // 2. Validate Quantity Mismatch
-  // Logic: Check if every item in payload matches the quantity in DB
-  // Note: Only checking items present in payload.
-  // If strict check needed (must include ALL items), logic would vary.
-  // Assuming payload must match EXACTLY what's in DB for those items or ALL items.
-  // "Compare inputItems vs DB OrderItems. Throw QTY_MISMATCH if numbers don't match."
+// --- PRIVATE HELPERS (<15 Lines) ---
 
-  for (const inputItem of items) {
-    const dbItem = orderItems.find(
-      (oi: typeof orderItems[0]) => oi.laundryItemId === inputItem.laundryItemId
-    );
+const getStatusForStation = (station: StationType): OrderStatus | null => {
+  if (station === StationType.WASHING) return OrderStatus.ARRIVED_AT_OUTLET; // Siap Cuci [cite: 70]
+  if (station === StationType.IRONING) return OrderStatus.WASHING; // Siap Setrika (dari Washing) [cite: 72]
+  if (station === StationType.PACKING) return OrderStatus.IRONING; // Siap Packing (dari Ironing) [cite: 74]
+  return null;
+};
 
-    if (!dbItem) {
-      // Item shouldn't exist in this order?
-      // Or maybe just extra item? Treating as mismatch for now
-      throw new Error("QTY_MISMATCH");
-    }
+const fetchOrderItems = async (orderId: string) => {
+  return await prisma.orderItem.findMany({ where: { orderId } });
+};
 
-    if (dbItem.quantity !== inputItem.quantity) {
-      throw new Error("QTY_MISMATCH");
-    }
+const validateItemQuantities = (
+  inputItems: ProcessOrderPayload["items"],
+  dbItems: { laundryItemId: string; quantity: number }[]
+) => {
+  if (inputItems.length !== dbItems.length) throw new Error("QTY_MISMATCH");
+
+  for (const inputItem of inputItems) {
+    const dbItem = dbItems.find((oi) => oi.laundryItemId === inputItem.laundryItemId);
+    // [cite: 55, 246] Wajib request bypass jika beda
+    if (!dbItem || dbItem.quantity !== inputItem.quantity) throw new Error("QTY_MISMATCH");
   }
+};
 
-  // Also check if payload has FEWER items than DB?
-  // "Compare inputItems vs DB OrderItems" implies full comparison usually.
-  if (items.length !== orderItems.length) {
-     throw new Error("QTY_MISMATCH");
+const determineNextStatus = (station: StationType, isPaid: boolean): OrderStatus | null => {
+  if (station === StationType.WASHING) return OrderStatus.IRONING; // [cite: 73]
+  if (station === StationType.IRONING) return OrderStatus.PACKING; // [cite: 75]
+  if (station === StationType.PACKING) {
+    return isPaid ? OrderStatus.READY_FOR_DELIVERY : OrderStatus.WAITING_FOR_PAYMENT; // [cite: 248, 249]
   }
+  return null;
+};
 
-  // 3. Create Process Record & Checks
+const createStationProcess = async (
+  orderId: string, workerId: string, station: StationType, items: ProcessOrderPayload["items"]
+) => {
   return await prisma.$transaction(async (tx) => {
-    const process = await tx.orderStationProcess.create({
+    const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, select: { isPaid: true } });
+    const nextStatus = determineNextStatus(station, order.isPaid);
+
+    if (nextStatus) {
+      await tx.order.update({ where: { id: orderId }, data: { status: nextStatus } });
+    }
+
+    return await tx.orderStationProcess.create({
       data: {
-        orderId,
-        station,
-        workerId,
-        completedAt: new Date(), // Assuming instant completion for this step
-        itemChecks: {
-          create: items.map((item) => ({
-            laundryItemId: item.laundryItemId,
-            inputQuantity: item.quantity,
-          })),
-        },
+        orderId, station, workerId, completedAt: new Date(),
+        itemChecks: { create: items.map((i) => ({ laundryItemId: i.laundryItemId, inputQuantity: i.quantity })) },
       },
-      include: {
-        itemChecks: true,
-      },
+      include: { itemChecks: true },
     });
-    
-    // Update Order Status based on station? 
-    // Not explicitly asked, but good practice. Leaving out to adhere to strict constraints unless needed.
-    
-    return process;
   });
 };

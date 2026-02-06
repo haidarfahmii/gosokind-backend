@@ -1,164 +1,108 @@
 import { prisma } from "../lib/prisma";
+import { getDistance } from "geolib"; 
 
-// Helper to calculate distance in meters
-function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371e3; // Radius of the earth in meters
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-    Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const d = R * c; // Distance in meters
-  return d;
-}
+const MAX_DISTANCE = 100; // meters
 
-const MAX_DISTANCE_METERS = 100; // Allow 100m radius
+// --- PUBLIC METHODS ---
 
-export const clockIn = async (employeeId: string, latitude: number, longitude: number) => {
-  // 0. Check Geofencing
-  const employee = await prisma.employee.findUnique({
-    where: { id: employeeId },
-    include: { outlet: true },
-  });
-
-  if (!employee) throw new Error("EMPLOYEE_NOT_FOUND");
-  if (!employee.outlet) throw new Error("NO_OUTLET_ASSIGNED");
-
-  const distance = getDistanceFromLatLonInMeters(
-    latitude,
-    longitude,
-    employee.outlet.latitude,
-    employee.outlet.longitude
-  );
-
-  if (distance > MAX_DISTANCE_METERS) {
-    throw new Error("OUT_OF_RANGE");
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // 1. Check if user currently has an OPEN shift (clockIn but no clockOut)
-  // This prevents concurrent shifts (even from previous days)
-  const openAttendance = await prisma.attendance.findFirst({
-    where: {
-      employeeId,
-      clockOut: null,
-    },
-  });
-
-  if (openAttendance) {
-    throw new Error("ALREADY_CLOCKED_IN");
-  }
-
-  // 2. Check if user ALREADY completed a shift today
-  // "Multiple shift is not allowed" -> One record per day max
-  const todayAttendance = await prisma.attendance.findFirst({
-    where: {
-      employeeId,
-      date: today,
-    },
-  });
-
-  if (todayAttendance) {
-    throw new Error("MULTIPLE_SHIFTS_NOT_ALLOWED");
-  }
+export const clockIn = async (userId: string, lat: number, long: number) => {
+  const employee = await validateEmployeeAndOutlet(userId);
+  validateLocation(lat, long, employee.outlet);
+  await ensureNoActiveShift(userId);
 
   return await prisma.attendance.create({
     data: {
-      employeeId,
-      date: new Date(), // Using current date for the Date field
+      employeeId: userId,
+      date: new Date(),
       clockIn: new Date(),
     },
   });
 };
 
-export const clockOut = async (employeeId: string) => {
-  const openAttendance = await prisma.attendance.findFirst({
-    where: {
-      employeeId,
-      clockOut: null,
-    },
-  });
-
-  if (!openAttendance) {
-    throw new Error("NOT_CLOCKED_IN");
-  }
+export const clockOut = async (userId: string) => {
+  const activeShift = await getActiveShift(userId);
 
   return await prisma.attendance.update({
-    where: {
-      id: openAttendance.id,
-    },
-    data: {
-      clockOut: new Date(),
-    },
+    where: { id: activeShift.id },
+    data: { clockOut: new Date() },
   });
 };
 
-export const getDashboardData = async (employeeId: string, dateStr?: string) => {
-  // 1. Current "Live" Status (For Swipe Button)
-  const openRecord = await prisma.attendance.findFirst({
-    where: {
-      employeeId,
-      clockOut: null,
-    },
-  });
+export const getDashboardData = async (employeeId: string, date?: string) => {
+    const targetDate = date ? new Date(date) : new Date();
+    const { start, end } = getDayRange(targetDate);
 
-  const isClockedIn = !!openRecord;
+    return await prisma.attendance.findMany({
+        where: { employeeId, date: { gte: start, lte: end } },
+        orderBy: { clockIn: 'desc' }
+    });
+};
 
-  // 2. Selected Date Data (For Cards & Activity List)
-  const targetDate = dateStr ? new Date(dateStr) : new Date();
-  targetDate.setHours(0, 0, 0, 0);
-  
-  const endOfTargetDate = new Date(targetDate);
-  endOfTargetDate.setHours(23, 59, 59, 999);
+export const getAllAttendance = async (outletId: string, page: number, limit: number, date?: string) => {
+  const whereClause = buildWhereClause(outletId, date);
 
-  // Find records for the specific target date
-  const recordsForDate = await prisma.attendance.findMany({
-    where: {
-      employeeId,
-      // Match records where the 'date' field falls within the target day
-      // OR records created on that day (if date field isn't reliable, but we use 'date' field)
-      date: {
-        gte: targetDate,
-        lte: endOfTargetDate
-      }
-    },
-    orderBy: { clockIn: 'desc' }
-  });
+  const [data, total] = await prisma.$transaction([
+    prisma.attendance.findMany({
+      where: whereClause,
+      include: { employee: true },
+      orderBy: { clockIn: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.attendance.count({ where: whereClause }),
+  ]);
 
-  // Summary for the selected date
-  // Assuming simpler logic: usually one record per day, but finding the "Main" one if multiple
-  const primaryRecord = recordsForDate[0] || null;
+  return { data, meta: { page, limit, total, lastPage: Math.ceil(total / limit) } };
+};
 
-  let dailyStatus = "ABSENT";
-  if (primaryRecord) {
-    if (primaryRecord.clockOut) dailyStatus = "COMPLETED";
-    else dailyStatus = "CLOCKED_IN"; // Or "ONGOING"
+// --- PRIVATE HELPERS (Atomic & Reusable) ---
+
+const getDayRange = (date: Date) => {
+  const start = new Date(date.setHours(0, 0, 0, 0));
+  const end = new Date(date.setHours(23, 59, 59, 999));
+  return { start, end };
+};
+
+const buildWhereClause = (outletId: string, dateStr?: string) => {
+  const where: any = { employee: { outletId } };
+  if (dateStr) {
+    const { start, end } = getDayRange(new Date(dateStr));
+    where.date = { gte: start, lte: end };
   }
+  return where;
+};
 
-  // Total summary (Global)
-  const totalDays = await prisma.attendance.count({
-    where: { employeeId },
+const validateEmployeeAndOutlet = async (userId: string) => {
+  const emp = await prisma.employee.findUnique({
+    where: { id: userId },
+    include: { outlet: true },
   });
+  
+  if (!emp) throw new Error("EMPLOYEE_NOT_FOUND");
+  if (!emp.outlet) throw new Error("NO_OUTLET_ASSIGNED");
+  
+  return emp as (typeof emp & { outlet: NonNullable<typeof emp.outlet> });
+};
 
-  return {
-    currentStatus: {
-      isClockedIn,
-      clockInTime: openRecord?.clockIn || null,
-    },
-    selectedDate: {
-      date: targetDate,
-      status: dailyStatus,
-      records: recordsForDate,
-      summary: {
-        clockIn: primaryRecord?.clockIn || null,
-        clockOut: primaryRecord?.clockOut || null,
-        totalDays,
-      }
-    }
-  };
+const validateLocation = (lat: number, long: number, outlet: { latitude: number; longitude: number }) => {
+  const dist = getDistance(
+    { latitude: lat, longitude: long },
+    { latitude: outlet.latitude, longitude: outlet.longitude }
+  );
+  if (dist > MAX_DISTANCE) throw new Error("OUT_OF_RANGE");
+};
+
+const ensureNoActiveShift = async (userId: string) => {
+  const active = await prisma.attendance.findFirst({
+    where: { employeeId: userId, clockOut: null },
+  });
+  if (active) throw new Error("ALREADY_CLOCKED_IN");
+};
+
+const getActiveShift = async (userId: string) => {
+  const active = await prisma.attendance.findFirst({
+    where: { employeeId: userId, clockOut: null },
+  });
+  if (!active) throw new Error("NOT_CLOCKED_IN");
+  return active;
 };
