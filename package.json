@@ -13,11 +13,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/client": "^6.19.2",
+    "@prisma/client": "^6.19.0",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/handlebars": "^4.0.40",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.2.1",
     "@types/nodemailer": "^7.0.9",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
@@ -26,12 +27,15 @@
     "express-validator": "^7.3.1",
     "handlebars": "^4.7.8",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^7.0.13"
+    "nodemailer": "^7.0.13",
+    "prisma": "^6.19.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.2.0",
+    "@types/nodemailer": "^7.0.9",
     "nodemon": "^3.1.11",
-    "prisma": "^6.19.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

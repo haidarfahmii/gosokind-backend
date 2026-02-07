@@ -1,0 +1,125 @@
+import { Request, Response } from "express";
+import { employeeService } from "../services/employee.service";
+import {
+  CreateEmployeeInput,
+  UpdateEmployeeInput,
+  ToggleStatusInput,
+} from "../@types/employee.types";
+
+export const employeeController = {
+  async createEmployee(req: Request, res: Response) {
+    const input: CreateEmployeeInput = req.body;
+
+    const employee = await employeeService.createEmployee(input);
+
+    res.status(201).json({
+      success: true,
+      message: "Employee created successfully",
+      data: employee,
+    });
+  },
+
+  async getAllEmployees(req: Request, res: Response) {
+    const { page, limit, role, outletId, search, isActive } = req.query;
+
+    const query = {
+      page: page ? parseInt(page as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined,
+      role: role as any,
+      outletId: outletId as string,
+      search: search as string,
+      isActive:
+        isActive === "true" ? true : isActive === "false" ? false : undefined,
+    };
+
+    const result = await employeeService.getAllEmployees(query);
+
+    res.status(200).json({
+      success: true,
+      message: "Employees retrieved successfully",
+      ...result,
+    });
+  },
+
+  async getEmployeeById(req: Request, res: Response) {
+    const { id } = req.params;
+
+    const employee = await employeeService.getEmployeeById(id as string);
+
+    res.status(200).json({
+      success: true,
+      message: "Employee retrieved successfully",
+      data: employee,
+    });
+  },
+
+  /**
+   * PUT /api/employees/:id
+   * Update employee
+   */
+  async updateEmployee(req: Request, res: Response) {
+    const { id } = req.params;
+    const input: UpdateEmployeeInput = req.body;
+
+    const employee = await employeeService.updateEmployee(id as string, input);
+
+    res.status(200).json({
+      success: true,
+      message: "Employee updated successfully",
+      data: employee,
+    });
+  },
+
+  /**
+   * DELETE /api/employees/:id
+   * Soft delete employee
+   */
+  async deleteEmployee(req: Request, res: Response) {
+    const { id } = req.params;
+
+    await employeeService.deleteEmployee(id as string);
+
+    res.status(200).json({
+      success: true,
+      message: "Employee deleted successfully",
+    });
+  },
+
+  /**
+   * GET /api/employees/customers
+   * Mendapatkan semua customers (untuk Super Admin)
+   */
+  async getAllCustomers(req: Request, res: Response) {
+    const { page, limit, search } = req.query;
+
+    const query = {
+      page: page ? parseInt(page as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined,
+      search: search as string,
+    };
+
+    const result = await employeeService.getAllCustomers(query);
+
+    res.status(200).json({
+      success: true,
+      message: "Customers retrieved successfully",
+      ...result,
+    });
+  },
+
+  async toggleEmployeeStatus(req: Request, res: Response) {
+    const { id } = req.params;
+    const { isActive }: ToggleStatusInput = req.body;
+
+    const employee = await employeeService.toggleEmployeeStatus(
+      id as string,
+      isActive,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Employee ${isActive ? "activated" : "deactivated"} successfully`,
+      data: employee,
+    });
+  },
+};
