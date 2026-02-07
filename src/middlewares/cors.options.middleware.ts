@@ -1,28 +1,24 @@
 import { Request, Response, NextFunction } from "express";
-import { TAppError } from "../utils/app-error";
+import cors from "cors";
+import { WHITELIST, NEXT_AUTH_SECRET_KEY } from "../config/index.config";
 
-/**
- * Global Error Handler Middleware
- * Harus di-register setelah semua routes
- */
-export function errorHandler(
-  error: TAppError,
-  _req: Request,
-  res: Response,
-  _next: NextFunction,
-) {
-  // Log error untuk debugging
-  console.error("❌ [Error]:", error.message);
-  if (process.env.NODE_ENV === "development") {
-    console.error("Stack:", error.stack);
+export function corsOptions(req: Request, res: Response, next: NextFunction) {
+  const nextAuthSecretKey = req?.headers["next-auth-secret-key"];
+
+  // terima request dari NextAuth dengan secret key
+  if (nextAuthSecretKey === NEXT_AUTH_SECRET_KEY) {
+    return next();
   }
 
-  const statusCode = error.statusCode || 500;
-  const message = error.message || "Internal Server Error";
-
-  res.status(statusCode).json({
-    success: false,
-    message,
-    ...(process.env.NODE_ENV === "development" && { stack: error.stack }),
-  });
+  // apply CORS untuk request lain
+  return cors({
+    origin(requestOrigin, callback) {
+      if (!requestOrigin || WHITELIST.indexOf(requestOrigin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })(req, res, next);
 }

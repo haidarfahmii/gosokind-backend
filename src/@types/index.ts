@@ -22,11 +22,12 @@ export interface AuthResponse {
     name: string;
     email: string;
     avatarUrl: string | null;
+    role: EmployeeRole | "CUSTOMER";
   };
 }
 
 export interface JWTPayload {
   userId: string;
   email: string;
-  role?: EmployeeRole;
+  role?: EmployeeRole | "CUSTOMER";
 }

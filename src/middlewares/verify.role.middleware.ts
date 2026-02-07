@@ -19,7 +19,7 @@ export function verifyRole(
       }
 
       // Validasi role dari JWT
-      if (!allowedRoles.includes(user.role)) {
+      if (!allowedRoles.includes(user.role as EmployeeRole)) {
         return next(
           AppError(
             `Forbidden: Only ${allowedRoles.join(", ")} can access this resource`,

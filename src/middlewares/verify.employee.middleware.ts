@@ -3,9 +3,7 @@ import { AppError } from "../utils/app-error";
 import prisma from "../config/prisma.config";
 import { EmployeeRole } from "../generated/prisma/client";
 
-/**
- * Middleware untuk memverifikasi bahwa user adalah Employee (bukan Customer)
- */
+// Middleware untuk memverifikasi bahwa user adalah Employee (bukan Customer)
 export async function verifyEmployee(
   req: Request,
   res: Response,
@@ -44,9 +42,7 @@ export async function verifyEmployee(
   }
 }
 
-/**
- * Middleware untuk memverifikasi bahwa user adalah Super Admin
- */
+// Middleware untuk memverifikasi bahwa user adalah Super Admin
 export async function verifySuperAdmin(
   req: Request,
   res: Response,

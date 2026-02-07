@@ -17,9 +17,7 @@ import { JWT_SECRET } from "../config/index.config";
 
 const router = Router();
 
-/**
- * Middleware global: Semua route memerlukan JWT token dan Admin role
- */
+// Middleware global: Semua route memerlukan JWT token dan Admin role
 router.use(verifyToken(JWT_SECRET!));
 
 router.get(

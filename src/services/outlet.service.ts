@@ -17,10 +17,6 @@ export const outletService = {
     return shippingPrice;
   },
 
-  /**
-   * GET ALL OUTLETS
-   * Mendapatkan semua outlet dengan pagination dan search
-   */
   async getAllOutlets(page: number = 1, limit: number = 10, search?: string) {
     const skip = (page - 1) * limit;
 
@@ -65,9 +61,6 @@ export const outletService = {
     };
   },
 
-  /**
-   * GET OUTLET BY ID
-   */
   async getOutletById(id: string) {
     const outlet = await prisma.outlet.findFirst({
       where: {

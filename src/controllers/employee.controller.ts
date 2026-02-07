@@ -53,10 +53,6 @@ export const employeeController = {
     });
   },
 
-  /**
-   * PUT /api/employees/:id
-   * Update employee
-   */
   async updateEmployee(req: Request, res: Response) {
     const { id } = req.params;
     const input: UpdateEmployeeInput = req.body;
@@ -70,10 +66,6 @@ export const employeeController = {
     });
   },
 
-  /**
-   * DELETE /api/employees/:id
-   * Soft delete employee
-   */
   async deleteEmployee(req: Request, res: Response) {
     const { id } = req.params;
 
@@ -85,10 +77,6 @@ export const employeeController = {
     });
   },
 
-  /**
-   * GET /api/employees/customers
-   * Mendapatkan semua customers (untuk Super Admin)
-   */
   async getAllCustomers(req: Request, res: Response) {
     const { page, limit, search } = req.query;
 
