@@ -1,4 +1,4 @@
-import { AuthResponse, JWTPayload, LoginInput, RegisterInput, VerifyInput } from "../@types"
+import { AuthResponse, GoogleLoginInput, JWTPayload, LoginInput, RegisterInput, VerifyInput } from "../@types"
 import prisma from "../config/prisma.config"
 import { AppError } from "../utils/app-error";
 import { createToken, verifyToken } from "../utils/jwt.util";
@@ -156,5 +156,59 @@ export const authService = {
             where: { id: userId },
             data: { password: hashedPassword },
         });
-    }
+    },
+    async googleLogin(input: GoogleLoginInput): Promise<AuthResponse> {
+        const { email, name, googleId, avatarUrl } = input;
+        let user = await prisma.customer.findUnique({
+            where: { email },
+        });
+        // 2. Logic: CREATE or UPDATE
+        if (!user) {
+            // SKENARIO A: User Baru (Register via Google)
+            user = await prisma.customer.create({
+                data: {
+                    email,
+                    fullName: name,
+                    password: null,      // Tidak ada password
+                    isVerified: true,    // Email Google dianggap valid
+                    provider: "google",
+                    providerId: googleId,
+                    avatarUrl: avatarUrl || null
+                }
+            });
+        } else {
+            // SKENARIO B: User Lama (Link Account)
+            user = await prisma.customer.update({
+                where: { id: user.id },
+                data: {
+                    provider: "google",
+                    providerId: googleId,
+                    isVerified: true, // Auto verify jika belum
+                    avatarUrl: user.avatarUrl ? user.avatarUrl : avatarUrl
+                }
+            });
+        }
+
+        const secretKey = JWT_SECRET || "purwadhika-gosokind-laundry-jcwdbsd36";
+        const token = await createToken(
+            {
+                userId: user.id,
+                email: user.email,
+                role: "CUSTOMER"
+            },
+            secretKey,
+            { expiresIn: "24h" }
+        );
+
+        return {
+            token,
+            user: {
+                id: user.id,
+                name: user.fullName,
+                email: user.email,
+                avatarUrl: user.avatarUrl,
+                role: "CUSTOMER"
+            },
+        };
+    },
 }  

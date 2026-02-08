@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authController } from "../controllers/auth.controller";
-import { forgotPasswordValidator, loginValidator, registerValidator, resetPasswordValidator, verifyValidator } from "../validators/auth.validator";
+import { forgotPasswordValidator, loginValidator, registerValidator, resetPasswordValidator, verifyValidator, googleLoginValidator } from "../validators/auth.validator";
 import { expressValidator } from "../middlewares/express-validator.middleware";
 import { verifyToken } from "../middlewares/verify.token.middleware";
 import { JWT_SECRET } from "../config/index.config";
@@ -41,6 +41,12 @@ router.post("/reset-password",
 router.get("/verify-token",
     verifyToken(JWT_SECRET!), // Middleware ini yang akan mengecek expired/invalid
     authController.checkToken
+);
+
+router.post("/google-login",
+    googleLoginValidator, // Pasang validator
+    expressValidator,     // Middleware cek error
+    authController.googleLogin // Panggil controller baru
 );
 
 export default router;

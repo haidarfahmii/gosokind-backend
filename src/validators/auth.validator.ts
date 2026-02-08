@@ -33,3 +33,12 @@ export const resetPasswordValidator = [
         .notEmpty().withMessage("Password is required")
         .isLength({ min: 6 }).withMessage("Password must be at least 6 characters")
 ];
+
+export const googleLoginValidator = [
+    body("email")
+        .isEmail().withMessage("Invalid email format"),
+    body("name")
+        .notEmpty().withMessage("Name is required"),
+    body("googleId")
+        .notEmpty().withMessage("Google ID is required"),
+];
