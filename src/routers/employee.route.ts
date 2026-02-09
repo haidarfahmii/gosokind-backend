@@ -16,11 +16,12 @@ import {
   verifyAdmin,
 } from "../middlewares/verify.role.middleware";
 import { JWT_SECRET } from "../config/index.config";
+import { verifyOutletScope } from "../middlewares/verify.outlet.scope.middleware";
 
 const router = Router();
 
-// Middleware global untuk semua routes employee
-router.use(verifyToken(JWT_SECRET!));
+router.use(verifyToken(JWT_SECRET!)); // verify JWT Token
+router.use(verifyOutletScope()); // verify outlet scope
 
 router.post(
   "/",

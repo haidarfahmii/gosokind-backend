@@ -22,6 +22,9 @@ export const employeeController = {
   async getAllEmployees(req: Request, res: Response) {
     const { page, limit, role, outletId, search, isActive } = req.query;
 
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
     const query = {
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
@@ -32,7 +35,11 @@ export const employeeController = {
         isActive === "true" ? true : isActive === "false" ? false : undefined,
     };
 
-    const result = await employeeService.getAllEmployees(query);
+    const result = await employeeService.getAllEmployees(
+      query,
+      scopedOutletId,
+      isSuperAdmin,
+    );
 
     res.status(200).json({
       success: true,
@@ -44,7 +51,14 @@ export const employeeController = {
   async getEmployeeById(req: Request, res: Response) {
     const { id } = req.params;
 
-    const employee = await employeeService.getEmployeeById(id as string);
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
+    const employee = await employeeService.getEmployeeById(
+      id as string,
+      scopedOutletId,
+      isSuperAdmin,
+    );
 
     res.status(200).json({
       success: true,

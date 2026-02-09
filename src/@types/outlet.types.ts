@@ -1,7 +1,5 @@
-export enum OutletStatus {
-  AVAILABLE = "AVAILABLE",
-  MAINTENANCE = "MAINTENANCE",
-}
+import { OutletStatus, Employee } from "@prisma/client";
+export { OutletStatus };
 
 export interface OpenCageResponse {
   status: {
@@ -30,17 +28,25 @@ export interface OpenCageResponse {
   };
 }
 
-export interface CreateOutletData {
+export interface CheckLocationInput {
+  province?: string;
+  city?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface CreateOutletInput {
   name: string;
   province?: string;
   city?: string;
   address: string;
-  latitude?: number;
-  longitude?: number;
+  latitude: number;
+  longitude: number;
   status?: OutletStatus;
 }
 
-export interface UpdateOutletData {
+export interface UpdateOutletInput {
   name?: string;
   province?: string;
   city?: string;
@@ -61,7 +67,10 @@ export interface OutletResponse {
   longitude: number;
   createdAt: Date;
   updatedAt: Date;
-  deletedAt: Date | null;
+  deletedAt?: Date | null;
+  employeeCount?: number;
+  orderCount?: number;
+  employees?: Partial<Employee>[];
 }
 
 export interface OutletWithGeocodingInfo extends OutletResponse {
@@ -75,7 +84,7 @@ export interface CalculateShippingResponse {
   outletId: string;
   outletName: string;
   customerAddressId: string;
-  distance: number; // in kilometers
-  shippingPrice: number; // in rupiah
-  estimatedTime: number; // in minutes
+  distance: number; // km
+  shippingPrice: number; // rp
+  estimatedTime: number; // minutes
 }

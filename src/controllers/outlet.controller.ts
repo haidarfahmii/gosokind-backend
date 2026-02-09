@@ -6,8 +6,16 @@ export const outletController = {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = req.query.search as string;
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
 
-    const result = await outletService.getAllOutlets(page, limit, search);
+    const result = await outletService.getAllOutlets(
+      page,
+      limit,
+      search,
+      scopedOutletId,
+      isSuperAdmin,
+    );
 
     res.status(200).json({
       success: true,
@@ -19,7 +27,15 @@ export const outletController = {
 
   async getOutletById(req: Request, res: Response) {
     const { id } = req.params;
-    const outlet = await outletService.getOutletById(id as string);
+
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
+    const outlet = await outletService.getOutletById(
+      id as string,
+      scopedOutletId,
+      isSuperAdmin,
+    );
 
     res.status(200).json({
       success: true,
@@ -103,23 +119,22 @@ export const outletController = {
 
   async calculateShipping(req: Request, res: Response) {
     const { outletId } = req.params;
-    const { customerAddressId } = req.body;
+    const { latitude, longitude } = req.body;
 
-    if (!customerAddressId) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer address ID is required",
-      });
-    }
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
 
     const result = await outletService.calculateShipping(
       outletId as string,
-      customerAddressId,
+      latitude,
+      longitude,
+      scopedOutletId,
+      isSuperAdmin,
     );
 
     res.status(200).json({
       success: true,
-      message: "Shipping calculated successfully",
+      message: "Shipping cost calculated successfully",
       data: result,
     });
   },

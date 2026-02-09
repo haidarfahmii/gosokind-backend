@@ -75,7 +75,11 @@ export const employeeService = {
     };
   },
 
-  async getAllEmployees(query: EmployeeListQuery) {
+  async getAllEmployees(
+    query: EmployeeListQuery,
+    scopedOutletId: string | null = null,
+    isSuperAdmin: boolean = false,
+  ) {
     const { page = 1, limit = 10, role, outletId, search, isActive } = query;
     const skip = (page - 1) * limit;
 
@@ -83,6 +87,14 @@ export const employeeService = {
     const where: any = {
       deletedAt: null,
     };
+
+    // outlet scope
+    if (!isSuperAdmin && scopedOutletId) {
+      // jika outlet admin, batasi ke outletnya
+      where.outletId = scopedOutletId;
+    } else if (isSuperAdmin && outletId) {
+      where.outletId = outletId;
+    }
 
     if (role) {
       where.role = role;
@@ -92,7 +104,9 @@ export const employeeService = {
       where.outletId = outletId;
     }
 
-    if (isActive !== undefined) where.isActive = isActive;
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
 
     if (search) {
       where.OR = [
@@ -141,7 +155,22 @@ export const employeeService = {
     };
   },
 
-  async getEmployeeById(employeeId: string): Promise<EmployeeResponse> {
+  async getEmployeeById(
+    employeeId: string,
+    scopedOutletId: string | null = null,
+    isSuperAdmin: boolean = false,
+  ): Promise<EmployeeResponse> {
+    const where: any = {
+      id: employeeId,
+      deletedAt: null,
+    };
+
+    // outlet scope
+    if (!isSuperAdmin && scopedOutletId) {
+      // outlet admin hanya bisa akses employee di outletnya
+      where.outletId = scopedOutletId;
+    }
+
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId, deletedAt: null },
       include: {
@@ -150,7 +179,10 @@ export const employeeService = {
     });
 
     if (!employee) {
-      throw AppError("Employee not found", 404);
+      throw AppError(
+        "Employee not found or you don't have access to this employee",
+        404,
+      );
     }
 
     return {
@@ -193,53 +225,43 @@ export const employeeService = {
       }
     }
 
-    // Validasi role dan outlet
-    const newRole = role || existingEmployee.role;
-    const newOutletId =
-      outletId !== undefined ? outletId : existingEmployee.outletId;
+    // validasi outlet jika di ubah
+    if (outletId !== undefined) {
+      // jika role di ubah menjadi Super Admin, outletId harus null
+      const newRole = role || existingEmployee.role;
 
-    if (newRole !== EmployeeRole.SUPER_ADMIN && !newOutletId) {
-      throw AppError("Outlet is required for non-Super Admin roles", 400);
-    }
+      if (newRole === EmployeeRole.SUPER_ADMIN && outletId !== null) {
+        throw AppError("Super Admin cannot be assigned to an outlet", 400);
+      }
 
-    if (newRole === EmployeeRole.SUPER_ADMIN && newOutletId) {
-      throw AppError("Super Admin cannot be assigned to an outlet", 400);
-    }
+      // jika bukan Super Admin, outletId harus ada
+      if (newRole !== EmployeeRole.SUPER_ADMIN && outletId) {
+        const outlet = await prisma.outlet.findUnique({
+          where: { id: outletId },
+        });
 
-    // Validasi outlet jika ada
-    if (newOutletId && newOutletId !== existingEmployee.outletId) {
-      const outlet = await prisma.outlet.findUnique({
-        where: { id: newOutletId },
-      });
-
-      if (!outlet) {
-        throw AppError("Outlet not found", 404);
+        if (!outlet) {
+          throw AppError("Outlet not found", 404);
+        }
       }
     }
 
-    // Prepare update data
-    const updateData: any = {};
-
-    if (email) updateData.email = email;
-    if (fullName) updateData.fullName = fullName;
-    if (role) updateData.role = role;
-    if (isActive !== undefined) updateData.isActive = isActive;
-
-    // Handle outlet assignment
-    if (role === EmployeeRole.SUPER_ADMIN) {
-      updateData.outletId = null;
-    } else if (outletId !== undefined) {
-      updateData.outletId = outletId;
-    }
-
+    let hashedPassword: string | undefined;
     if (password) {
-      updateData.password = await bcrypt.hash(password, 10);
+      hashedPassword = await bcrypt.hash(password, 10);
     }
 
     // Update employee
     const updatedEmployee = await prisma.employee.update({
       where: { id: employeeId },
-      data: updateData,
+      data: {
+        email,
+        password: hashedPassword,
+        fullName,
+        role,
+        outletId,
+        isActive,
+      },
       include: {
         outlet: true,
       },
@@ -347,6 +369,9 @@ export const employeeService = {
   ): Promise<EmployeeResponse> {
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId, deletedAt: null },
+      include: {
+        outlet: true,
+      },
     });
 
     if (!employee) {

@@ -15,12 +15,14 @@ import {
   verifySuperAdmin,
   verifyAdmin,
 } from "../middlewares/verify.role.middleware";
+import { verifyOutletScope } from "../middlewares/verify.outlet.scope.middleware";
 import { JWT_SECRET } from "../config/index.config";
 
 const router = Router();
 
 // Middleware global: Semua route memerlukan JWT token
 router.use(verifyToken(JWT_SECRET!));
+router.use(verifyOutletScope());
 
 router.get(
   "/",
