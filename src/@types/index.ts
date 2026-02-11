@@ -36,3 +36,14 @@ export interface GoogleLoginInput {
   googleId: string;
   avatarUrl?: string;
 }
+
+export interface UpdateProfileInput {
+  fullName?: string;
+  email?: string;
+  avatarUrl?: string;
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
