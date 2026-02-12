@@ -10,7 +10,14 @@ export const employeeController = {
   async createEmployee(req: Request, res: Response) {
     const input: CreateEmployeeInput = req.body;
 
-    const employee = await employeeService.createEmployee(input);
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
+    const employee = await employeeService.createEmployee(
+      input,
+      scopedOutletId,
+      isSuperAdmin,
+    );
 
     res.status(201).json({
       success: true,
@@ -71,7 +78,15 @@ export const employeeController = {
     const { id } = req.params;
     const input: UpdateEmployeeInput = req.body;
 
-    const employee = await employeeService.updateEmployee(id as string, input);
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
+    const employee = await employeeService.updateEmployee(
+      id as string,
+      input,
+      scopedOutletId,
+      isSuperAdmin,
+    );
 
     res.status(200).json({
       success: true,
@@ -113,9 +128,14 @@ export const employeeController = {
     const { id } = req.params;
     const { isActive }: ToggleStatusInput = req.body;
 
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
     const employee = await employeeService.toggleEmployeeStatus(
       id as string,
       isActive,
+      scopedOutletId,
+      isSuperAdmin,
     );
 
     res.status(200).json({

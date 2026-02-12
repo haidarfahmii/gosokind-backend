@@ -10,8 +10,38 @@ import {
 import { EmployeeRole } from "@prisma/client";
 
 export const employeeService = {
-  async createEmployee(input: CreateEmployeeInput): Promise<EmployeeResponse> {
-    const { email, password, fullName, role, outletId } = input;
+  async createEmployee(
+    input: CreateEmployeeInput,
+    scopedOutletId: string | null = null,
+    isSuperAdmin: boolean = false,
+  ): Promise<EmployeeResponse> {
+    let { email, password, fullName, role, outletId } = input;
+
+    if (!isSuperAdmin && scopedOutletId) {
+      // Jika outlet admin tidak mengirim outletId, gunakan scopedOutletId mereka
+      if (!outletId) {
+        outletId = scopedOutletId;
+      }
+
+      // Jika outlet admin mengirim outletId, pastikan sama dengan scopedOutletId
+      if (outletId !== scopedOutletId) {
+        throw AppError(
+          "Forbidden: You can only create employees for your own outlet",
+          403,
+        );
+      }
+
+      // outlet admin tidak bisa membuat super admin atau outlet admin lain
+      if (
+        role === EmployeeRole.SUPER_ADMIN ||
+        role === EmployeeRole.OUTLET_ADMIN
+      ) {
+        throw AppError(
+          "Forbidden: You cannot create Super Admin or Outlet Admin accounts",
+          403,
+        );
+      }
+    }
 
     // Cek apakah email sudah digunakan
     const existingEmployee = await prisma.employee.findUnique({
@@ -22,14 +52,25 @@ export const employeeService = {
       throw AppError("Email already exists", 400);
     }
 
-    // Validasi: Jika bukan Super Admin, outletId harus ada
+    // Validasi jika bukan Super Admin, outletId harus ada
     if (role !== EmployeeRole.SUPER_ADMIN && !outletId) {
       throw AppError("Outlet is required for non-Super Admin roles", 400);
     }
 
-    // Validasi: Jika Super Admin, outletId harus null
+    // Validasi jJika Super Admin, outletId harus null
     if (role === EmployeeRole.SUPER_ADMIN && outletId) {
       throw AppError("Super Admin cannot be assigned to an outlet", 400);
+    }
+
+    // Hanya super admin yang bisa membuat super admin atau outlet admin
+    if (
+      !isSuperAdmin &&
+      (role === EmployeeRole.SUPER_ADMIN || role === EmployeeRole.OUTLET_ADMIN)
+    ) {
+      throw AppError(
+        "Forbidden: Only Super Admin can create Super Admin or Outlet Admin accounts",
+        403,
+      );
     }
 
     // Validasi outlet jika ada
@@ -185,6 +226,15 @@ export const employeeService = {
       );
     }
 
+    // Double check outlet scope untuk non-super admin
+    if (
+      !isSuperAdmin &&
+      scopedOutletId &&
+      employee.outletId !== scopedOutletId
+    ) {
+      throw AppError("Forbidden: You don't have access to this employee", 403);
+    }
+
     return {
       id: employee.id,
       email: employee.email,
@@ -202,8 +252,10 @@ export const employeeService = {
   async updateEmployee(
     employeeId: string,
     input: UpdateEmployeeInput,
+    scopedOutletId: string | null = null,
+    isSuperAdmin: boolean = false,
   ): Promise<EmployeeResponse> {
-    const { email, password, fullName, role, outletId, isActive } = input;
+    let { email, password, fullName, role, outletId, isActive } = input;
 
     // Cek apakah employee ada
     const existingEmployee = await prisma.employee.findUnique({
@@ -212,6 +264,40 @@ export const employeeService = {
 
     if (!existingEmployee) {
       throw AppError("Employee not found", 404);
+    }
+
+    // outlet admin hanya bisa update employee di outletnya sendiri
+    if (!isSuperAdmin && scopedOutletId) {
+      // Cek apakah employee yang akan di-update ada di outlet yang sama
+      if (existingEmployee.outletId !== scopedOutletId) {
+        throw AppError(
+          "Forbidden: You can only update employees in your own outlet",
+          403,
+        );
+      }
+
+      // Jika mencoba mengubah outletId
+      if (outletId !== undefined) {
+        // Jika outletId null atau berbeda, tolak
+        if (!outletId || outletId !== scopedOutletId) {
+          throw AppError(
+            "Forbidden: You cannot move employees to other outlets",
+            403,
+          );
+        }
+      }
+
+      // outlet admin tidak bisa mengubah role menjadi super admin atau outlet admin
+      if (
+        role &&
+        (role === EmployeeRole.SUPER_ADMIN ||
+          role === EmployeeRole.OUTLET_ADMIN)
+      ) {
+        throw AppError(
+          "Forbidden: You cannot change employee role to Super Admin or Outlet Admin",
+          403,
+        );
+      }
     }
 
     // Jika email diubah, cek duplikasi
@@ -366,6 +452,8 @@ export const employeeService = {
   async toggleEmployeeStatus(
     employeeId: string,
     isActive: boolean,
+    scopedOutletId: string | null = null,
+    isSuperAdmin: boolean = false,
   ): Promise<EmployeeResponse> {
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId, deletedAt: null },
@@ -376,6 +464,16 @@ export const employeeService = {
 
     if (!employee) {
       throw AppError("Employee not found", 404);
+    }
+
+    // validasi outlet admin hanya bisa toggle employee di outletnya
+    if (!isSuperAdmin && scopedOutletId) {
+      if (employee.outletId !== scopedOutletId) {
+        throw AppError(
+          "Forbidden: You can only change status of employees in your own outlet",
+          403,
+        );
+      }
     }
 
     const updatedEmployee = await prisma.employee.update({

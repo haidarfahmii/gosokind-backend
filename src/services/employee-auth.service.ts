@@ -38,6 +38,7 @@ export const employeeAuthService = {
         userId: employee.id,
         email: employee.email,
         role: employee.role,
+        outletId: employee.outletId,
       },
       JWT_SECRET!,
       {

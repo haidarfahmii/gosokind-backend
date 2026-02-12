@@ -23,6 +23,7 @@ export interface AuthResponse {
     email: string;
     avatarUrl: string | null;
     role: EmployeeRole | "CUSTOMER";
+    outletId?: string | null;
   };
 }
 
@@ -30,4 +31,5 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role?: EmployeeRole | "CUSTOMER";
+  outletId?: string | null;
 }

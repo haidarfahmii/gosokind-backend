@@ -25,7 +25,7 @@ router.use(verifyOutletScope()); // verify outlet scope
 
 router.post(
   "/",
-  verifySuperAdmin(true),
+  verifyAdmin(false),
   createEmployeeValidator,
   expressValidator,
   employeeController.createEmployee,
@@ -57,7 +57,7 @@ router.get(
 
 router.put(
   "/:id",
-  verifySuperAdmin(true),
+  verifyAdmin(false),
   updateEmployeeValidator,
   expressValidator,
   employeeController.updateEmployee,
@@ -65,7 +65,7 @@ router.put(
 
 router.patch(
   "/:id/toggle-status",
-  verifySuperAdmin(true),
+  verifyAdmin(false),
   toggleStatusValidator,
   expressValidator,
   employeeController.toggleEmployeeStatus,
