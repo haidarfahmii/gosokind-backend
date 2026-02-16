@@ -11,6 +11,41 @@ export const checkAvailability = async (driverId: string) => {
   return { available: true };
 };
 
+// [cite: frontend-gap] Aggregator untuk Frontend "activeJob"
+export const getDriverActiveJob = async (driverId: string) => {
+  const job = await getActiveJob(driverId);
+  if (!job) return null;
+
+  // Transform ke format Frontend Friendly
+  return {
+    ...job,
+    type: job.pickupDriverId === driverId ? 'PICKUP' : 'DELIVERY'
+  };
+};
+
+// [cite: frontend-gap] Aggregator untuk Frontend "availableJobs"
+export const getAvailableJobs = async () => {
+    // Ambil Pickup yg WAITING DAN Delivery yg READY
+    const [pickups, deliveries] = await prisma.$transaction([
+        prisma.order.findMany({
+            where: { status: OrderStatus.WAITING_FOR_PICKUP, pickupDriverId: null },
+            include: { customer: { select: { fullName: true } }, address: true }, // [cite: 194] Relation is 'customer', not 'user'
+            orderBy: { createdAt: 'asc' }
+        }),
+        prisma.order.findMany({
+            where: { status: OrderStatus.READY_FOR_DELIVERY, deliveryDriverId: null },
+            include: { customer: { select: { fullName: true } }, address: true },
+            orderBy: { updatedAt: 'asc' }
+        })
+    ]);
+
+    // Gabung dan labeli tipe
+    return [
+        ...pickups.map(p => ({ ...p, type: 'PICKUP', customerName: p.customer.fullName, address: p.address.address })),
+        ...deliveries.map(d => ({ ...d, type: 'DELIVERY', customerName: d.customer.fullName, address: d.address.address }))
+    ];
+};
+
 export const acceptPickup = async (driverId: string, orderId: string) => {
   await ensureDriverIdle(driverId);
 

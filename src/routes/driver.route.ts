@@ -7,6 +7,10 @@ const router = Router();
 // Semua route driver HARUS terproteksi
 router.use(verifyToken); 
 
+// Frontend Data Aggregators
+router.get("/active", driverController.getActiveJob);
+router.get("/available", driverController.getAvailableJobs);
+
 router.get("/availability", driverController.checkAvailability);
 
 // Pickup Flow

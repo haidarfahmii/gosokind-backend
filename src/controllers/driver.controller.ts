@@ -19,6 +19,25 @@ export const checkAvailability = async (req: Request, res: Response) => {
   }
 };
 
+export const getActiveJob = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const result = await service.getDriverActiveJob(userId);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+export const getAvailableJobs = async (req: Request, res: Response) => {
+  try {
+    const result = await service.getAvailableJobs();
+    res.json({ success: true, data: result });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
 export const acceptPickup = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.userId;
