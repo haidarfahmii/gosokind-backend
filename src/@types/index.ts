@@ -47,3 +47,11 @@ export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
 }
+
+export interface CreateAddressInput {
+  label: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  isPrimary?: boolean;
+}

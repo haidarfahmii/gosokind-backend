@@ -1,6 +1,7 @@
 import express, { Express, NextFunction, Request, Response } from "express";
 import authRouter from "./routers/auth.route";
 import profileRouter from "./routers/profile.route";
+import addressRouter from "./routers/address.route";
 import dotenv from "dotenv"
 import { corsOptions } from "./middlewares/cors.options.middleware";
 
@@ -19,6 +20,7 @@ app.get("/", (_: Request, res: Response) => {
 
 app.use("/api/auth", authRouter)
 app.use("/api/profile", profileRouter)
+app.use("/api/addresses", addressRouter);
 
 /*
   Middleware (Application Level)
