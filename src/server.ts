@@ -7,6 +7,8 @@ import employeeAuthRoute from "./routers/employee-auth.route";
 import employeeRoute from "./routers/employee.route";
 import outletRoute from "./routers/outlet.route";
 import laundryItemRoute from "./routers/laundry-item.route";
+import orderRoute from "./routers/order.route";
+import customerOrderRoute from "./routers/customer-order.route";
 
 import dotenv from "dotenv";
 
@@ -26,10 +28,10 @@ app.use("/api/auth/employee", employeeAuthRoute);
 app.use("/api/employees", employeeRoute);
 app.use("/api/outlets", outletRoute);
 app.use("/api/laundry-items", laundryItemRoute);
+app.use("/api/orders", orderRoute);
+app.use("/api/customer/orders", customerOrderRoute);
 
-/*
-  Middleware (Application Level)
-*/
+// Middleware (Application Level)
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const statusCode = err?.statusCode ? err?.statusCode : 500;
   const message = err?.isOperational ? err?.message : "Something went wrong!";
