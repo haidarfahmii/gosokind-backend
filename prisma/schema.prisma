@@ -15,8 +15,7 @@
 
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -35,6 +34,11 @@ enum EmployeeRole {
   WORKER_IRONING
   WORKER_PACKING
   DRIVER
+}
+
+enum OutletStatus {
+  AVAILABLE
+  MAINTENANCE
 }
 
 // Status pesanan yang sangat rinci untuk tracking
@@ -101,7 +105,8 @@ model Employee {
   fullName      String
   avatarUrl     String?
   
-  role          EmployeeRole 
+  role          EmployeeRole
+  isActive      Boolean      @default(true) 
 
   // Relations
   outletId      String?      // Super Admin tidak memiliki outlet, tapi yang lain nya ada
@@ -147,8 +152,12 @@ model Outlet {
   id          String  @id @default(cuid())
   name        String
   address     String
+  province    String? 
+  city        String?
   latitude    Float   
   longitude   Float   
+  
+  status      OutletStatus @default(AVAILABLE)
 
   // Relations
   employees   Employee[]  // Karyawan di outlet ini
@@ -158,6 +167,8 @@ model Outlet {
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
   
+  @@index([status])
+  @@index([province, city])
   @@map("outlets")
 }
 
@@ -165,6 +176,9 @@ model Outlet {
 model LaundryItem {
   id          String  @id @default(cuid())
   name        String  // e.g. Kaos, Celana
+  category    String? // e.g., "Atasan", "Bawahan", "Linen", etc.
+  unit        String? // e.g., "Pcs", "Kg", "Set"
+  basePrice   Float?  // Base price per unit
   
   // Relations
   orderItems      OrderItem[]

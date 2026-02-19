@@ -4,49 +4,61 @@ import { forgotPasswordValidator, loginValidator, registerValidator, resetPasswo
 import { expressValidator } from "../middlewares/express-validator.middleware";
 import { verifyToken } from "../middlewares/verify.token.middleware";
 import { JWT_SECRET } from "../config/index.config";
+import { confirmDeliveryValidator } from "../validators/order.validator";
+import { orderController } from "../controllers/order.controller";
 
 const router = Router();
 
-router.post("/register",
-    registerValidator,
-    expressValidator,
-    authController.register
+router.post(
+  "/register",
+  registerValidator,
+  expressValidator,
+  authController.register,
 );
 
-router.post("/verify",
-    verifyToken(JWT_SECRET!),
-    verifyValidator,
-    expressValidator,
-    authController.verify
+router.post(
+  "/verify",
+  verifyToken(JWT_SECRET!),
+  verifyValidator,
+  expressValidator,
+  authController.verify,
 );
 
-router.post("/login",
-    loginValidator,
-    expressValidator,
-    authController.login);
+router.post("/login", loginValidator, expressValidator, authController.login);
 
-router.post("/forgot-password",
-    forgotPasswordValidator,
-    expressValidator,
-    authController.forgotPassword
+router.post(
+  "/forgot-password",
+  forgotPasswordValidator,
+  expressValidator,
+  authController.forgotPassword,
 );
 
-router.post("/reset-password",
-    verifyToken(JWT_SECRET!),
-    resetPasswordValidator,
-    expressValidator,
-    authController.resetPassword
+router.post(
+  "/reset-password",
+  verifyToken(JWT_SECRET!),
+  resetPasswordValidator,
+  expressValidator,
+  authController.resetPassword,
 );
 
-router.get("/verify-token",
-    verifyToken(JWT_SECRET!), // Middleware ini yang akan mengecek expired/invalid
-    authController.checkToken
+router.get(
+  "/verify-token",
+  verifyToken(JWT_SECRET!), // Middleware ini yang akan mengecek expired/invalid
+  authController.checkToken,
 );
 
 router.post("/google-login",
     googleLoginValidator, // Pasang validator
     expressValidator,     // Middleware cek error
     authController.googleLogin // Panggil controller baru
+);
+
+router.patch(
+  "/orders/:id/confirm-delivery",
+  verifyToken(JWT_SECRET!),
+  confirmDeliveryValidator,
+  expressValidator,
+  orderController.confirmDelivery,
 );
 
 export default router;

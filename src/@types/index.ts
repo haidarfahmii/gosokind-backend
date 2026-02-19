@@ -1,3 +1,5 @@
+import { EmployeeRole } from "@prisma/client";
+
 export interface RegisterInput {
   email: string;
 }
@@ -20,14 +22,16 @@ export interface AuthResponse {
     name: string;
     email: string;
     avatarUrl: string | null;
-    role: string;
+    role: EmployeeRole | "CUSTOMER";
+    outletId?: string | null;
   };
 }
 
 export interface JWTPayload {
   userId: string;
   email: string;
-  role: string;
+  role?: EmployeeRole | "CUSTOMER";
+  outletId?: string | null;
 }
 
 export interface GoogleLoginInput {
@@ -55,3 +59,4 @@ export interface CreateAddressInput {
   longitude: number;
   isPrimary?: boolean;
 }
+

@@ -2,8 +2,11 @@ import path from "path";
 import dotenv from "dotenv";
 
 dotenv.config({
-    path: path.resolve(process.cwd(), ".env"),
+  path: path.resolve(process.cwd(), ".env"),
 });
+
+// Port
+export const PORT = process.env.PORT;
 
 // mailer
 export const GOOGLE_APP_ACCOUNT = process.env.GOOGLE_APP_ACCOUNT;
@@ -26,3 +29,5 @@ export const CLIENT_URL = process.env.CLIENT_URL;
 export const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME
 export const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY
 export const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET
+// Geocoding API
+export const OPENCAGE_API_KEY = process.env.OPENCAGE_API_KEY;
