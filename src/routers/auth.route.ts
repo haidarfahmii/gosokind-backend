@@ -5,7 +5,7 @@ import { expressValidator } from "../middlewares/express-validator.middleware";
 import { verifyToken } from "../middlewares/verify.token.middleware";
 import { JWT_SECRET } from "../config/index.config";
 import { confirmDeliveryValidator } from "../validators/order.validator";
-import { orderController } from "../controllers/order.controller";
+import { orderStatusController } from "../controllers/order";
 
 const router = Router();
 
@@ -58,7 +58,7 @@ router.patch(
   verifyToken(JWT_SECRET!),
   confirmDeliveryValidator,
   expressValidator,
-  orderController.confirmDelivery,
+  orderStatusController.confirmDelivery
 );
 
 export default router;
