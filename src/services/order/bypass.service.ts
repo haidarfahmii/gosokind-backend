@@ -15,6 +15,15 @@ export const bypassService = {
     workerId: string,
     scopedOutletId: string | null,
   ): Promise<BypassRequestResponse> {
+    const worker = await prisma.employee.findUnique({
+      where: { id: workerId, deletedAt: null },
+      select: { id: true, outletId: true, role: true },
+    });
+
+    if (!worker) {
+      throw AppError("Worker not found", 404);
+    }
+
     const order = await prisma.order.findUnique({
       where: { id: input.orderId, deletedAt: null },
       include: {

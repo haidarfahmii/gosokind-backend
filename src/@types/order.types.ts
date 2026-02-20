@@ -23,6 +23,7 @@ export interface CreateOrderByCustomerInput {
 export interface InputOrderDetails {
   totalWeight: number;
   items: OrderItemInput[];
+  workerId?: string;
 }
 
 export interface UpdateOrderStatusInput {

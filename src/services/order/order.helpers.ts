@@ -38,7 +38,7 @@ export async function generateOrderNumber(): Promise<string> {
   const lockKey = getLockKeyFromPrefix(prefix);
 
   const orderNumber = await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
     const count = await tx.order.count({
       where: {
         orderNumber: {

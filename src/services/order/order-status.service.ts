@@ -117,12 +117,19 @@ export const orderStatusService = {
         });
       }
 
+      // Menentukan data update berdasarkan status tujuan
+      const updateData: { status: OrderStatus; isPaid?: boolean } = {
+        status: input.status,
+      };
+
+      if (input.status === OrderStatus.READY_FOR_DELIVERY) {
+        updateData.isPaid = true;
+      }
+
       // Update order status
       return tx.order.update({
         where: { id: orderId },
-        data: {
-          status: input.status,
-        },
+        data: updateData,
       });
     });
 

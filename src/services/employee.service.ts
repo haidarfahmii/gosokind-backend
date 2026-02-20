@@ -432,6 +432,17 @@ export const employeeService = {
         provider: true,
         createdAt: true,
         updatedAt: true,
+        addresses: {
+          where: { isPrimary: true }, // Hanya ambil primary address
+          select: {
+            id: true,
+            label: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+            isPrimary: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",

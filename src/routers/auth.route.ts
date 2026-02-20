@@ -11,7 +11,7 @@ import { expressValidator } from "../middlewares/express-validator.middleware";
 import { verifyToken } from "../middlewares/verify.token.middleware";
 import { JWT_SECRET } from "../config/index.config";
 import { confirmDeliveryValidator } from "../validators/order.validator";
-import { orderController } from "../controllers/order.controller";
+import { combinedOrderController as orderController } from "../controllers/order";
 
 const router = Router();
 

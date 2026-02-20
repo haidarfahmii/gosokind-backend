@@ -223,6 +223,11 @@ export const inputOrderDetailsValidator = [
     .isInt({ min: 1 })
     .withMessage("Quantity must be at least 1")
     .toInt(),
+  body("workerId")
+    .notEmpty()
+    .withMessage("Worker ID is required")
+    .isString()
+    .withMessage("Worker ID must be a string"),
 ];
 
 // PATCH /api/customer/orders/:id/driver-status
