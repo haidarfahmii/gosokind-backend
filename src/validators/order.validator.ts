@@ -187,11 +187,6 @@ export const createOrderByCustomerValidator = [
     .withMessage("Address ID is required")
     .isString()
     .withMessage("Address ID must be a string"),
-  body("outletId")
-    .notEmpty()
-    .withMessage("Outlet ID is required")
-    .isString()
-    .withMessage("Outlet ID must be a string"),
 ];
 
 // POST /api/customer/orders/:id/input-details - Admin input order weight & items
