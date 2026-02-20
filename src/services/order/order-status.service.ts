@@ -5,7 +5,7 @@ import {
   UpdateDriverStatusInput,
   OrderResponse,
 } from "../../@types/order.types";
-import { OrderStatus, EmployeeRole } from "@prisma/client";
+import { OrderStatus, EmployeeRole, BypassStatus } from "@prisma/client";
 import {
   validateStatusTransition,
   validateDriverStatusTransition,
@@ -54,6 +54,24 @@ export const orderStatusService = {
 
     // Validasi status transition
     validateStatusTransition(order.status, input.status);
+
+    // jika order sedang di station dan ada bypass PENDING, transisi akan di blok sampai admin approve/reject
+    if (isStationStatus(order.status)) {
+      const currentStationType = getStationType(order.status);
+      const pendingBypass = await prisma.bypassRequest.findFirst({
+        where: {
+          orderId,
+          station: currentStationType,
+          status: BypassStatus.PENDING,
+        },
+      });
+
+      if (pendingBypass)
+        throw AppError(
+          `Cannot advance order: There is a pending bypass request for the ${currentStationType} station (ID: ${pendingBypass.id}). Please wait for admin to approve or reject it first.`,
+          400,
+        );
+    }
 
     // Validasi worker ID untuk station
     const isStation = isStationStatus(input.status);
