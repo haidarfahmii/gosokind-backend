@@ -55,6 +55,22 @@ export const employeeController = {
     });
   },
 
+  async getEmployeeStats(req: Request, res: Response) {
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
+    const result = await employeeService.getEmployeeStats(
+      scopedOutletId,
+      isSuperAdmin,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Employee stats retrieved successfully",
+      data: result,
+    });
+  },
+
   async getEmployeeById(req: Request, res: Response) {
     const { id } = req.params;
 

@@ -47,6 +47,8 @@ router.get(
   employeeController.getAllCustomers,
 );
 
+router.get("/stats", verifyAdmin(false), employeeController.getEmployeeStats);
+
 router.get(
   "/:id",
   verifyAdmin(false),

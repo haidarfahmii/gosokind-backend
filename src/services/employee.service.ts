@@ -196,6 +196,41 @@ export const employeeService = {
     };
   },
 
+  async getEmployeeStats(
+    scopedOutletId: string | null = null,
+    isSuperAdmin: boolean = false,
+  ) {
+    // Build where clause dengan outlet scope
+    const where: any = { deletedAt: null };
+
+    if (!isSuperAdmin && scopedOutletId) {
+      where.outletId = scopedOutletId;
+    }
+
+    // Hitung total, active, inactive secara paralel
+    const [total, active, inactive, byRoleRaw] = await Promise.all([
+      prisma.employee.count({ where }),
+      prisma.employee.count({ where: { ...where, isActive: true } }),
+      prisma.employee.count({ where: { ...where, isActive: false } }),
+      prisma.employee.groupBy({
+        by: ["role"],
+        where,
+        _count: { role: true },
+      }),
+    ]);
+
+    // Format byRole menjadi { ROLE_NAME: count }
+    const byRole = byRoleRaw.reduce(
+      (acc, item) => {
+        acc[item.role] = item._count.role;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    return { total, active, inactive, byRole };
+  },
+
   async getEmployeeById(
     employeeId: string,
     scopedOutletId: string | null = null,
