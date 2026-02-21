@@ -1,5 +1,5 @@
-import { prisma } from "../lib/prisma";
-import { getDistance } from "geolib"; 
+import prisma from "../config/prisma.config";
+import { getDistance } from "geolib";
 
 const MAX_DISTANCE = 500; // meters
 
@@ -29,42 +29,44 @@ export const clockOut = async (userId: string) => {
 };
 
 export const getDashboardData = async (employeeId: string, date?: string) => {
-    const targetDate = date ? new Date(date) : new Date();
-    const { start, end } = getDayRange(targetDate);
-    // 1. Get Today's Latest Attendance (or any active unfinished shift)
-    const todayShift = await prisma.attendance.findFirst({
-        where: { 
-            employeeId, 
-            OR: [
-                { date: { gte: start, lte: end } },
-                { clockOut: null }
-            ]
-        },
-        orderBy: { clockIn: 'desc' }
-    });
-    // 2. Count Total Unique Days Worked
-    // Group by date to count distinct days
-    const totalDaysGroup = await prisma.attendance.groupBy({
-        by: ['date'],
-        where: { employeeId },
-    });
-    const daysWorked = totalDaysGroup.length;
-    // 3. Calc Duration (if clocked out)
-    let shiftDuration = null;
-    if (todayShift?.clockOut) {
-        const diff = todayShift.clockOut.getTime() - todayShift.clockIn.getTime();
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        shiftDuration = `${hours}h ${minutes}m`;
-    }
-    return {
-        todayAttendance: todayShift,
-        shiftDuration,
-        daysWorked
-    };
+  const targetDate = date ? new Date(date) : new Date();
+  const { start, end } = getDayRange(targetDate);
+  // 1. Get Today's Latest Attendance (or any active unfinished shift)
+  const todayShift = await prisma.attendance.findFirst({
+    where: {
+      employeeId,
+      OR: [{ date: { gte: start, lte: end } }, { clockOut: null }],
+    },
+    orderBy: { clockIn: "desc" },
+  });
+  // 2. Count Total Unique Days Worked
+  // Group by date to count distinct days
+  const totalDaysGroup = await prisma.attendance.groupBy({
+    by: ["date"],
+    where: { employeeId },
+  });
+  const daysWorked = totalDaysGroup.length;
+  // 3. Calc Duration (if clocked out)
+  let shiftDuration = null;
+  if (todayShift?.clockOut) {
+    const diff = todayShift.clockOut.getTime() - todayShift.clockIn.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    shiftDuration = `${hours}h ${minutes}m`;
+  }
+  return {
+    todayAttendance: todayShift,
+    shiftDuration,
+    daysWorked,
+  };
 };
 
-export const getAllAttendance = async (outletId: string, page: number, limit: number, date?: string) => {
+export const getAllAttendance = async (
+  outletId: string,
+  page: number,
+  limit: number,
+  date?: string,
+) => {
   const whereClause = buildWhereClause(outletId, date);
 
   const [data, total] = await prisma.$transaction([
@@ -78,7 +80,10 @@ export const getAllAttendance = async (outletId: string, page: number, limit: nu
     prisma.attendance.count({ where: whereClause }),
   ]);
 
-  return { data, meta: { page, limit, total, lastPage: Math.ceil(total / limit) } };
+  return {
+    data,
+    meta: { page, limit, total, lastPage: Math.ceil(total / limit) },
+  };
 };
 
 // --- PRIVATE HELPERS (Atomic & Reusable) ---
@@ -103,17 +108,21 @@ const validateEmployeeAndOutlet = async (userId: string) => {
     where: { id: userId },
     include: { outlet: true },
   });
-  
+
   if (!emp) throw new Error("EMPLOYEE_NOT_FOUND");
   if (!emp.outlet) throw new Error("NO_OUTLET_ASSIGNED");
-  
-  return emp as (typeof emp & { outlet: NonNullable<typeof emp.outlet> });
+
+  return emp as typeof emp & { outlet: NonNullable<typeof emp.outlet> };
 };
 
-const validateLocation = (lat: number, long: number, outlet: { latitude: number; longitude: number }) => {
+const validateLocation = (
+  lat: number,
+  long: number,
+  outlet: { latitude: number; longitude: number },
+) => {
   const dist = getDistance(
     { latitude: lat, longitude: long },
-    { latitude: outlet.latitude, longitude: outlet.longitude }
+    { latitude: outlet.latitude, longitude: outlet.longitude },
   );
   if (dist > MAX_DISTANCE) throw new Error("OUT_OF_RANGE");
 };
