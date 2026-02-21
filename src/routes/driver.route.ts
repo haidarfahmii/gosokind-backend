@@ -1,11 +1,12 @@
 import { Router } from "express";
 import * as driverController from "../controllers/driver.controller";
-import { verifyToken } from "../middlewares/auth.middleware"; // WAJIB ADA!
+import { JWT_SECRET } from "../config/index.config";
+import { verifyToken } from "../middlewares/verify.token.middleware";
 
 const router = Router();
 
 // Semua route driver HARUS terproteksi
-router.use(verifyToken); 
+router.use(verifyToken(JWT_SECRET!));
 
 // Frontend Data Aggregators
 router.get("/active", driverController.getActiveJob);

@@ -1,10 +1,11 @@
 import { Router } from "express";
 import * as workerController from "../controllers/worker.controller";
-import { verifyToken } from "../middlewares/auth.middleware"; // WAJIB
+import { JWT_SECRET } from "../config/index.config";
+import { verifyToken } from "../middlewares/verify.token.middleware";
 
 const router = Router();
 
-router.use(verifyToken); // Kunci semua endpoint worker
+router.use(verifyToken(JWT_SECRET!)); // Kunci semua endpoint worker
 
 router.get("/orders", workerController.getOrderList); // Incoming Jobs
 router.get("/history", workerController.getJobHistory); // Completed Jobs

@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma";
+import prisma from "../config/prisma.config";
 import { StationType, BypassStatus } from "../generated/prisma/client";
 
 interface CreateBypassPayload {
