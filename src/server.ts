@@ -11,6 +11,10 @@ import outletRoute from "./routers/outlet.route";
 import laundryItemRoute from "./routers/laundry-item.route";
 import orderRoute from "./routers/order.route";
 import customerOrderRoute from "./routers/customer-order.route";
+import attendanceRoute from "./routes/attendance.route";
+import driverRoute from "./routes/driver.route";
+import workerRoute from "./routes/worker.route";
+import bypassRoute from "./routes/bypass.route";
 
 import dotenv from "dotenv";
 
@@ -25,8 +29,8 @@ app.get("/", (_req: Request, res: Response) => {
   res.send("Gosokind App API is Running 🚀");
 });
 
-app.use("/api/auth", authRouter)
-app.use("/api/profile", profileRouter)
+app.use("/api/auth", authRouter);
+app.use("/api/profile", profileRouter);
 app.use("/api/addresses", addressRouter);
 app.use("/api/auth/employee", employeeAuthRoute);
 app.use("/api/employees", employeeRoute);
@@ -34,6 +38,10 @@ app.use("/api/outlets", outletRoute);
 app.use("/api/laundry-items", laundryItemRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/customer/orders", customerOrderRoute);
+app.use("/api/attendance", attendanceRoute);
+app.use("/api/driver", driverRoute);
+app.use("/api/worker", workerRoute);
+app.use("/api/bypass", bypassRoute);
 
 // Middleware (Application Level)
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
