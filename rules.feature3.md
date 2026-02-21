@@ -41,6 +41,6 @@
 - **Input Validation:** Worker inputs MUST match Admin's `OrderItem` quantity.
 - **Mismatch Flow:** If quantity mismatch -> Throw 400 Error -> Worker must request Bypass.
 
-## 6. WORKSPACE ISOLATION
+## 6. WORKSPACE ISOLATION RULES
 - **Firewall:** Backend (`gosokind-backend`) must NEVER import from Frontend (`gosokind-frontend`).
 - **Dependencies:** Install packages strictly in the backend folder.
