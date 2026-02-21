@@ -83,4 +83,22 @@ export const authController = {
             message: "Token is valid",
         });
     },
+
+    async googleLogin(req: Request, res: Response) {
+        // Ambil data yang dikirim dari Frontend NextAuth
+        const { email, name, googleId, avatarUrl } = req.body;
+
+        const result = await authService.googleLogin({
+            email,
+            name,
+            googleId,
+            avatarUrl
+        });
+        console.log(result)
+        res.status(200).json({
+            success: true,
+            message: "Google login successful",
+            data: result // Berisi token & user
+        });
+    },
 }

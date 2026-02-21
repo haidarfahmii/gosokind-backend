@@ -6,6 +6,7 @@ import {
   registerValidator,
   resetPasswordValidator,
   verifyValidator,
+  googleLoginValidator,
 } from "../validators/auth.validator";
 import { expressValidator } from "../middlewares/express-validator.middleware";
 import { verifyToken } from "../middlewares/verify.token.middleware";
@@ -51,6 +52,13 @@ router.get(
   "/verify-token",
   verifyToken(JWT_SECRET!), // Middleware ini yang akan mengecek expired/invalid
   authController.checkToken,
+);
+
+router.post(
+  "/google-login",
+  googleLoginValidator, // Pasang validator
+  expressValidator, // Middleware cek error
+  authController.googleLogin, // Panggil controller baru
 );
 
 router.patch(

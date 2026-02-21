@@ -8,60 +8,68 @@ import {
 import { OrderStatus } from "@prisma/client";
 import { generateOrderNumber } from "./order.helpers";
 import { orderQueryService } from "./order-query.service";
+import { geoService } from "../geo.service";
 
 export const orderCreationService = {
   async createOrderByCustomer(
     input: CreateOrderByCustomerInput,
   ): Promise<OrderResponse> {
-    // validasi customer ada
+    // 1. Validate customer
     const customer = await prisma.customer.findUnique({
       where: { id: input.customerId, deletedAt: null },
     });
+    if (!customer) throw AppError("Customer not found", 404);
 
-    if (!customer) {
-      throw AppError("Customer not found", 404);
-    }
-
-    // validasi kalo alamat ada dan milik customer
+    // 2. Validate and get address coordinates
     const address = await prisma.address.findUnique({
-      where: {
-        id: input.addressId,
-        deletedAt: null,
-      },
+      where: { id: input.addressId, deletedAt: null },
     });
-
-    if (!address) {
-      throw AppError("Address not found", 404);
-    }
-
+    if (!address) throw AppError("Address not found", 404);
     if (address.customerId !== input.customerId) {
       throw AppError("Address does not belong to this customer", 400);
     }
 
-    // validasi outlet ada dan tersedia
-    const outlet = await prisma.outlet.findUnique({
-      where: { id: input.outletId, deletedAt: null },
+    // 3. Find the nearest available outlet
+    const availableOutlets = await prisma.outlet.findMany({
+      where: { status: "AVAILABLE", deletedAt: null },
     });
 
-    if (!outlet) {
-      throw AppError("Outlet not found", 404);
+    if (availableOutlets.length === 0) {
+      throw AppError("No available outlets at the moment", 404);
     }
 
-    if (outlet.status !== "AVAILABLE") {
-      throw AppError("Outlet is not available", 400);
+    let nearestOutlet = null;
+    let shortestDistance = Infinity;
+
+    for (const outlet of availableOutlets) {
+      const distance = geoService.calculateDistance(
+        address.latitude,
+        address.longitude,
+        outlet.latitude,
+        outlet.longitude
+      );
+
+      if (distance < shortestDistance) {
+        shortestDistance = distance;
+        nearestOutlet = outlet;
+      }
     }
 
-    // Generate order number
+    if (!nearestOutlet) {
+      throw AppError("Could not determine the nearest outlet", 404);
+    }
+
+    // 4. Generate order number
     const orderNumber = await generateOrderNumber();
 
-    // buat pesanan
+    // 5. Create the order with the automatically selected outletId
     const order = await prisma.order.create({
       data: {
         orderNumber,
         customerId: input.customerId,
         addressId: input.addressId,
-        outletId: input.outletId,
-        totalWeight: null, // weight akan di input admin
+        outletId: nearestOutlet.id, // Use the nearest outlet found
+        totalWeight: null,
         totalPrice: null,
         status: OrderStatus.WAITING_FOR_PICKUP,
       },

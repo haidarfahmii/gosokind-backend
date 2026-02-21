@@ -1,8 +1,10 @@
-import express, { Express, Request, Response, NextFunction } from "express";
+import express, { Express, NextFunction, Request, Response } from "express";
+import authRouter from "./routers/auth.route";
+import profileRouter from "./routers/profile.route";
+import addressRouter from "./routers/address.route";
 import { errorHandler } from "./middlewares/error.handler.middleware";
 import { PORT } from "./config/index.config";
 import { corsOptions } from "./middlewares/cors.options.middleware";
-import authRouter from "./routers/auth.route";
 import employeeAuthRoute from "./routers/employee-auth.route";
 import employeeRoute from "./routers/employee.route";
 import outletRoute from "./routers/outlet.route";
@@ -23,7 +25,9 @@ app.get("/", (_req: Request, res: Response) => {
   res.send("Gosokind App API is Running 🚀");
 });
 
-app.use("/api/auth", authRouter);
+app.use("/api/auth", authRouter)
+app.use("/api/profile", profileRouter)
+app.use("/api/addresses", addressRouter);
 app.use("/api/auth/employee", employeeAuthRoute);
 app.use("/api/employees", employeeRoute);
 app.use("/api/outlets", outletRoute);

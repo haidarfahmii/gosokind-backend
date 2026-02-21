@@ -16,7 +16,6 @@ export interface OrderItemInput {
 export interface CreateOrderByCustomerInput {
   customerId: string;
   addressId: string;
-  outletId: string;
 }
 
 // input untuk admin mengisi detail order

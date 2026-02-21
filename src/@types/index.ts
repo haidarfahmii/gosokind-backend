@@ -33,3 +33,30 @@ export interface JWTPayload {
   role?: EmployeeRole | "CUSTOMER";
   outletId?: string | null;
 }
+
+export interface GoogleLoginInput {
+  email: string;
+  name: string;
+  googleId: string;
+  avatarUrl?: string;
+}
+
+export interface UpdateProfileInput {
+  fullName?: string;
+  email?: string;
+  avatarUrl?: string;
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface CreateAddressInput {
+  label: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  isPrimary?: boolean;
+}
+
