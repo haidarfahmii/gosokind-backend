@@ -29,12 +29,12 @@ export const getAvailableJobs = async () => {
     const [pickups, deliveries] = await prisma.$transaction([
         prisma.order.findMany({
             where: { status: OrderStatus.WAITING_FOR_PICKUP, pickupDriverId: null },
-            include: { customer: { select: { fullName: true } }, address: true }, // [cite: 194] Relation is 'customer', not 'user'
+            include: { customer: { select: { fullName: true } }, address: true, orderItems: true },
             orderBy: { createdAt: 'asc' }
         }),
         prisma.order.findMany({
             where: { status: OrderStatus.READY_FOR_DELIVERY, deliveryDriverId: null },
-            include: { customer: { select: { fullName: true } }, address: true },
+            include: { customer: { select: { fullName: true } }, address: true, orderItems: true },
             orderBy: { updatedAt: 'asc' }
         })
     ]);
@@ -117,6 +117,11 @@ const getActiveJob = async (driverId: string) => {
         { deliveryDriverId: driverId, status: OrderStatus.DELIVERY_ON_THE_WAY },
       ],
     },
+    include: {
+      customer: { select: { fullName: true } },
+      address: true,
+      orderItems: true
+    }
   });
 };
 

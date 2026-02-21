@@ -73,9 +73,11 @@ async function main() {
 
   // 5. Create Test Orders for Feature 3
   
-  // ORDER 1: Untuk testing DRIVER (Waiting for Pickup)
-  await prisma.order.create({
-    data: {
+  // ORDER 1: Basic Pickup (1 item)
+  await prisma.order.upsert({
+    where: { orderNumber: "INV-DRIVER-001" },
+    update: {},
+    create: {
       orderNumber: "INV-DRIVER-001",
       customerId: customer.id,
       addressId: address.id,
@@ -89,9 +91,67 @@ async function main() {
     }
   });
 
+  // ORDER 2: Heavy Pickup (Many items)
+  await prisma.order.upsert({
+    where: { orderNumber: "INV-DRIVER-002" },
+    update: {},
+    create: {
+      orderNumber: "INV-DRIVER-002",
+      customerId: customer.id,
+      addressId: address.id,
+      status: OrderStatus.WAITING_FOR_PICKUP,
+      orderItems: {
+        create: [
+          { laundryItemId: itemKaos.id, quantity: 15 },
+          { laundryItemId: itemCelana.id, quantity: 10 }
+        ]
+      }
+    }
+  });
+
+  // ORDER 3: Delivery Job (Already packed and paid)
+  await prisma.order.upsert({
+    where: { orderNumber: "INV-DELIVERY-003" },
+    update: {},
+    create: {
+      orderNumber: "INV-DELIVERY-003",
+      customerId: customer.id,
+      addressId: address.id,
+      status: OrderStatus.READY_FOR_DELIVERY,
+      isPaid: true,
+      orderItems: {
+        create: [
+          { laundryItemId: itemKaos.id, quantity: 5 }
+        ]
+      }
+    }
+  });
+
+  // Generate a batch of 5 random pickup jobs for testing lists
+  for(let i=1; i<=5; i++) {
+    const orderNum = `INV-BATCH-00${i}`;
+    await prisma.order.upsert({
+      where: { orderNumber: orderNum },
+      update: {},
+      create: {
+        orderNumber: orderNum,
+        customerId: customer.id,
+        addressId: address.id,
+        status: OrderStatus.WAITING_FOR_PICKUP,
+        orderItems: {
+          create: [
+            { laundryItemId: itemKaos.id, quantity: Math.floor(Math.random() * 5) + 1 }
+          ]
+        }
+      }
+    });
+  }
+
   // ORDER 2: Untuk testing WORKER (Ready for Washing)
-  await prisma.order.create({
-    data: {
+  await prisma.order.upsert({
+    where: { orderNumber: "INV-WASH-001" },
+    update: {},
+    create: {
       orderNumber: "INV-WASH-001",
       customerId: customer.id,
       addressId: address.id,

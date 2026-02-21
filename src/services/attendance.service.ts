@@ -1,7 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { getDistance } from "geolib"; 
 
-const MAX_DISTANCE = 100; // meters
+const MAX_DISTANCE = 500; // meters
 
 // --- PUBLIC METHODS ---
 
@@ -31,9 +31,15 @@ export const clockOut = async (userId: string) => {
 export const getDashboardData = async (employeeId: string, date?: string) => {
     const targetDate = date ? new Date(date) : new Date();
     const { start, end } = getDayRange(targetDate);
-    // 1. Get Today's Latest Attendance
+    // 1. Get Today's Latest Attendance (or any active unfinished shift)
     const todayShift = await prisma.attendance.findFirst({
-        where: { employeeId, date: { gte: start, lte: end } },
+        where: { 
+            employeeId, 
+            OR: [
+                { date: { gte: start, lte: end } },
+                { clockOut: null }
+            ]
+        },
         orderBy: { clockIn: 'desc' }
     });
     // 2. Count Total Unique Days Worked
