@@ -14,8 +14,8 @@ export interface OrderItemInput {
 
 // input untuk cus membuat order baru
 export interface CreateOrderByCustomerInput {
-  customerId: string;
   addressId: string;
+  pickupAt?: string | Date;
 }
 
 // input untuk admin mengisi detail order
@@ -72,6 +72,7 @@ export interface OrderResponse {
   totalPrice: number | null;
   isPaid: boolean;
   status: OrderStatus;
+  pickupAt: string | Date;
 
   // Customer info
   customer: {

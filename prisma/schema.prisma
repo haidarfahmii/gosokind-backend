@@ -218,6 +218,7 @@ model Order {
   stationProcesses OrderStationProcess[] // Progress pengerjaan
   bypassRequests   BypassRequest[]
 
+  pickupAt DateTime @default(now())
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?

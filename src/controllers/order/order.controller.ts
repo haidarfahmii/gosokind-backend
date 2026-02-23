@@ -62,20 +62,34 @@ export const orderController = {
     }
   },
 
+  async getOrderByOrderNumber(req: Request, res: Response, next: NextFunction) {
+    try {
+      const orderNumber = req.params.orderNumber as string;
+      const scopedOutletId = res.locals.scopedOutletId;
+      const isSuperAdmin = res.locals.isSuperAdmin;
+
+      const order = await orderService.getOrderbyOrderNumber(
+        orderNumber,
+        scopedOutletId,
+        isSuperAdmin,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Order retrieved successfully by Order Number",
+        data: order,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async createOrderByCustomer(req: Request, res: Response, next: NextFunction) {
     try {
       const input: CreateOrderByCustomerInput = req.body;
       const customerId = res.locals.payload.userId;
 
-      if (input.customerId !== customerId) {
-        return res.status(403).json({
-          success: false,
-          message: "Forbidden: You can only create orders for yourself",
-          data: null,
-        });
-      }
-
-      const order = await orderService.createOrderByCustomer(input);
+      const order = await orderService.createOrderByCustomer(customerId, input);
 
       res.status(201).json({
         success: true,

@@ -10,6 +10,7 @@ export const orderService = {
   getAllOrders: orderQueryService.getAllOrders,
   // Get order by ID with full details
   getOrderById: orderQueryService.getOrderById,
+  getOrderbyOrderNumber: orderQueryService.getOrderByOrderNumber,
 
   // CREATION OPERATIONS
 

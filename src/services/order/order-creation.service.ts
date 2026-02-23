@@ -11,12 +11,12 @@ import { orderQueryService } from "./order-query.service";
 import { geoService } from "../geo.service";
 
 export const orderCreationService = {
-  async createOrderByCustomer(
+  async createOrderByCustomer(customerId: string,
     input: CreateOrderByCustomerInput,
   ): Promise<OrderResponse> {
     // 1. Validate customer
     const customer = await prisma.customer.findUnique({
-      where: { id: input.customerId, deletedAt: null },
+      where: { id: customerId, deletedAt: null },
     });
     if (!customer) throw AppError("Customer not found", 404);
 
@@ -25,7 +25,7 @@ export const orderCreationService = {
       where: { id: input.addressId, deletedAt: null },
     });
     if (!address) throw AppError("Address not found", 404);
-    if (address.customerId !== input.customerId) {
+    if (address.customerId !== customerId) {
       throw AppError("Address does not belong to this customer", 400);
     }
 
@@ -66,12 +66,13 @@ export const orderCreationService = {
     const order = await prisma.order.create({
       data: {
         orderNumber,
-        customerId: input.customerId,
+        customerId: customerId,
         addressId: input.addressId,
         outletId: nearestOutlet.id, // Use the nearest outlet found
         totalWeight: null,
         totalPrice: null,
         status: OrderStatus.WAITING_FOR_PICKUP,
+        pickupAt: input.pickupAt ? new Date(input.pickupAt) : new Date()
       },
     });
 
@@ -193,4 +194,6 @@ export const orderCreationService = {
 
     return orderQueryService.getOrderById(updatedOrder.id, outletId, false);
   },
+
+  
 };

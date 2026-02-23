@@ -177,16 +177,23 @@ export const handleBypassRequestValidator = [
 
 // POST /api/customer/orders
 export const createOrderByCustomerValidator = [
-  body("customerId")
-    .notEmpty()
-    .withMessage("Customer ID is required")
-    .isString()
-    .withMessage("Customer ID must be a string"),
   body("addressId")
     .notEmpty()
     .withMessage("Address ID is required")
     .isString()
     .withMessage("Address ID must be a string"),
+  body("pickupAt")
+    .optional() 
+    // .isISO8601().withMessage("Pickup time must be a valid ISO 8601 date")
+    .custom((value) => {
+      if (!value) return true;
+      const pickupDate = new Date(value);
+      const now = new Date();
+      if (pickupDate <= now) {
+        throw new Error("Pickup time must be in the future");
+      }
+      return true;
+    }),
 ];
 
 // POST /api/customer/orders/:id/input-details - Admin input order weight & items
