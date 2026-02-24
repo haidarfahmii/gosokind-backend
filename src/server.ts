@@ -9,6 +9,7 @@ import outletRoute from "./routers/outlet.route";
 import laundryItemRoute from "./routers/laundry-item.route";
 import orderRoute from "./routers/order.route";
 import customerOrderRoute from "./routers/customer-order.route";
+import reportRoute from "./routers/report.route";
 
 import dotenv from "dotenv";
 
@@ -30,6 +31,7 @@ app.use("/api/outlets", outletRoute);
 app.use("/api/laundry-items", laundryItemRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/customer/orders", customerOrderRoute);
+app.use("/api/reports", reportRoute);
 
 // Middleware (Application Level)
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
