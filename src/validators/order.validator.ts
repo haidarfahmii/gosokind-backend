@@ -183,7 +183,7 @@ export const createOrderByCustomerValidator = [
     .isString()
     .withMessage("Address ID must be a string"),
   body("pickupAt")
-    .optional() 
+    .optional()
     // .isISO8601().withMessage("Pickup time must be a valid ISO 8601 date")
     .custom((value) => {
       if (!value) return true;
@@ -225,11 +225,6 @@ export const inputOrderDetailsValidator = [
     .isInt({ min: 1 })
     .withMessage("Quantity must be at least 1")
     .toInt(),
-  body("workerId")
-    .notEmpty()
-    .withMessage("Worker ID is required")
-    .isString()
-    .withMessage("Worker ID must be a string"),
 ];
 
 // PATCH /api/customer/orders/:id/driver-status

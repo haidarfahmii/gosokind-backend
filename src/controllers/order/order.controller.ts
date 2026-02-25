@@ -118,13 +118,13 @@ export const orderController = {
         });
       }
 
-      if (!input.workerId) {
-        return res.status(400).json({
-          success: false,
-          message: "workerId is required to assign washing station worker",
-          data: null,
-        });
-      }
+      // if (!input.workerId) {
+      //   return res.status(400).json({
+      //     success: false,
+      //     message: "workerId is required to assign washing station worker",
+      //     data: null,
+      //   });
+      // }
 
       const order = await orderService.inputOrderDetails(
         orderId,

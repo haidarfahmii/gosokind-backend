@@ -11,7 +11,8 @@ import { orderQueryService } from "./order-query.service";
 import { geoService } from "../geo.service";
 
 export const orderCreationService = {
-  async createOrderByCustomer(customerId: string,
+  async createOrderByCustomer(
+    customerId: string,
     input: CreateOrderByCustomerInput,
   ): Promise<OrderResponse> {
     // 1. Validate customer
@@ -46,7 +47,7 @@ export const orderCreationService = {
         address.latitude,
         address.longitude,
         outlet.latitude,
-        outlet.longitude
+        outlet.longitude,
       );
 
       if (distance < shortestDistance) {
@@ -72,7 +73,7 @@ export const orderCreationService = {
         totalWeight: null,
         totalPrice: null,
         status: OrderStatus.WAITING_FOR_PICKUP,
-        pickupAt: input.pickupAt ? new Date(input.pickupAt) : new Date()
+        pickupAt: input.pickupAt ? new Date(input.pickupAt) : new Date(),
       },
     });
 
@@ -178,22 +179,20 @@ export const orderCreationService = {
       });
 
       //  Buat stationProcess untuk WASHING agar worker bisa bypass
-      if (input.workerId) {
-        await tx.orderStationProcess.create({
-          data: {
-            orderId,
-            station: "WASHING",
-            workerId: input.workerId,
-            startedAt: new Date(),
-          },
-        });
-      }
+      // if (input.workerId) {
+      //   await tx.orderStationProcess.create({
+      //     data: {
+      //       orderId,
+      //       station: "WASHING",
+      //       workerId: input.workerId,
+      //       startedAt: new Date(),
+      //     },
+      //   });
+      // }
 
       return updated;
     });
 
     return orderQueryService.getOrderById(updatedOrder.id, outletId, false);
   },
-
-  
 };
