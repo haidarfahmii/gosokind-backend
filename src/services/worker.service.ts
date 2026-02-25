@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.config";
-import { StationType, OrderStatus } from "../generated/prisma/client";
+import { StationType, OrderStatus } from "@prisma/client";
 
 interface ProcessOrderPayload {
   orderId: string;
@@ -10,7 +10,6 @@ interface ProcessOrderPayload {
 
 // --- PUBLIC METHODS ---
 
-// [cite: 240, 241] Melihat daftar pesanan yang MASUK ke station
 export const getIncomingOrders = async (
   station: StationType,
   page: number,
@@ -22,13 +21,16 @@ export const getIncomingOrders = async (
 
   const [data, total] = await prisma.$transaction([
     prisma.order.findMany({
-      where: { status: targetStatus },
-      include: { orderItems: { include: { laundryItem: true } } },
+      where: { status: targetStatus, deletedAt: null },
+      include: {
+        orderItems: { include: { laundryItem: true } },
+        customer: { select: { fullName: true, email: true } },
+      },
       orderBy: { createdAt: "asc" },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.order.count({ where: { status: targetStatus } }),
+    prisma.order.count({ where: { status: targetStatus, deletedAt: null } }),
   ]);
 
   return {
@@ -37,7 +39,6 @@ export const getIncomingOrders = async (
   };
 };
 
-//  Melihat history pekerjaan worker
 export const getWorkerHistory = async (
   workerId: string,
   page: number,
@@ -46,7 +47,17 @@ export const getWorkerHistory = async (
   const [data, total] = await prisma.$transaction([
     prisma.orderStationProcess.findMany({
       where: { workerId },
-      include: { order: true },
+      include: {
+        order: {
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+            totalWeight: true,
+          },
+        },
+        itemChecks: { include: { laundryItem: true } },
+      },
       orderBy: { completedAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
@@ -69,12 +80,12 @@ export const processStationOrder = async (payload: ProcessOrderPayload) => {
   return await createStationProcess(orderId, workerId, station, items);
 };
 
-// --- PRIVATE HELPERS (<15 Lines) ---
+// --- PRIVATE HELPERS ---
 
 const getStatusForStation = (station: StationType): OrderStatus | null => {
-  if (station === StationType.WASHING) return OrderStatus.ARRIVED_AT_OUTLET; // Siap Cuci [cite: 70]
-  if (station === StationType.IRONING) return OrderStatus.WASHING; // Siap Setrika (dari Washing) [cite: 72]
-  if (station === StationType.PACKING) return OrderStatus.IRONING; // Siap Packing (dari Ironing) [cite: 74]
+  if (station === StationType.WASHING) return OrderStatus.WASHING;
+  if (station === StationType.IRONING) return OrderStatus.IRONING;
+  if (station === StationType.PACKING) return OrderStatus.PACKING;
   return null;
 };
 
@@ -92,7 +103,6 @@ const validateItemQuantities = (
     const dbItem = dbItems.find(
       (oi) => oi.laundryItemId === inputItem.laundryItemId,
     );
-    // [cite: 55, 246] Wajib request bypass jika beda
     if (!dbItem || dbItem.quantity !== inputItem.quantity)
       throw new Error("QTY_MISMATCH");
   }
@@ -102,12 +112,12 @@ const determineNextStatus = (
   station: StationType,
   isPaid: boolean,
 ): OrderStatus | null => {
-  if (station === StationType.WASHING) return OrderStatus.IRONING; // [cite: 73]
-  if (station === StationType.IRONING) return OrderStatus.PACKING; // [cite: 75]
+  if (station === StationType.WASHING) return OrderStatus.IRONING;
+  if (station === StationType.IRONING) return OrderStatus.PACKING;
   if (station === StationType.PACKING) {
     return isPaid
       ? OrderStatus.READY_FOR_DELIVERY
-      : OrderStatus.WAITING_FOR_PAYMENT; // [cite: 248, 249]
+      : OrderStatus.WAITING_FOR_PAYMENT;
   }
   return null;
 };
@@ -123,6 +133,7 @@ const createStationProcess = async (
       where: { id: orderId },
       select: { isPaid: true },
     });
+
     const nextStatus = determineNextStatus(station, order.isPaid);
 
     if (nextStatus) {
@@ -131,6 +142,12 @@ const createStationProcess = async (
         data: { status: nextStatus },
       });
     }
+
+    // Selesaikan proses station sebelumnya jika ada
+    await tx.orderStationProcess.updateMany({
+      where: { orderId, station, completedAt: null },
+      data: { completedAt: new Date() },
+    });
 
     return await tx.orderStationProcess.create({
       data: {
@@ -145,7 +162,7 @@ const createStationProcess = async (
           })),
         },
       },
-      include: { itemChecks: true },
+      include: { itemChecks: { include: { laundryItem: true } } },
     });
   });
 };

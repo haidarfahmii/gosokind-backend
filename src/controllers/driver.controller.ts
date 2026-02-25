@@ -1,120 +1,139 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import * as service from "../services/driver.service";
+import * as driverService from "../services/driver.service";
+import { JWTPayload } from "../@types";
 
-// Schema Validation untuk Body
 const orderIdSchema = z.object({
-  orderId: z.string().cuid({ message: "Invalid Order ID Format" }),
+  orderId: z.string().cuid({ message: "Invalid Order ID format" }),
 });
 
-// --- HTTP HANDLERS (Jembatan req/res ke Service) ---
+export const driverController = {
+  async checkAvailability(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const result = await driverService.checkAvailability(payload.userId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-export const checkAvailability = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.userId;
-    const result = await service.checkAvailability(userId);
-    res.json({ success: true, data: result });
-  } catch (error) {
-    handleError(res, error);
-  }
+  async getActiveJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const result = await driverService.getDriverActiveJob(payload.userId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getAvailableJobs(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await driverService.getAvailableJobs();
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async acceptPickup(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const parsed = orderIdSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Validation Error",
+            errors: parsed.error.issues,
+          });
+      }
+
+      await driverService.acceptPickup(payload.userId, parsed.data.orderId);
+      res.json({ success: true, message: "Pickup accepted successfully" });
+    } catch (error: any) {
+      handleDriverError(res, next, error);
+    }
+  },
+
+  async completePickup(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const parsed = orderIdSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Validation Error",
+            errors: parsed.error.issues,
+          });
+      }
+
+      await driverService.completePickup(payload.userId, parsed.data.orderId);
+      res.json({
+        success: true,
+        message: "Pickup completed. Laundry arrived at outlet.",
+      });
+    } catch (error: any) {
+      handleDriverError(res, next, error);
+    }
+  },
+
+  async acceptDelivery(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const parsed = orderIdSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Validation Error",
+            errors: parsed.error.issues,
+          });
+      }
+
+      await driverService.acceptDelivery(payload.userId, parsed.data.orderId);
+      res.json({ success: true, message: "Delivery accepted successfully" });
+    } catch (error: any) {
+      handleDriverError(res, next, error);
+    }
+  },
+
+  async completeDelivery(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const parsed = orderIdSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Validation Error",
+            errors: parsed.error.issues,
+          });
+      }
+
+      await driverService.completeDelivery(payload.userId, parsed.data.orderId);
+      res.json({ success: true, message: "Delivery completed successfully" });
+    } catch (error: any) {
+      handleDriverError(res, next, error);
+    }
+  },
 };
 
-export const getActiveJob = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.userId;
-    const result = await service.getDriverActiveJob(userId);
-    res.json({ success: true, data: result });
-  } catch (error) {
-    handleError(res, error);
-  }
-};
-
-export const getAvailableJobs = async (req: Request, res: Response) => {
-  try {
-    const result = await service.getAvailableJobs();
-    res.json({ success: true, data: result });
-  } catch (error) {
-    handleError(res, error);
-  }
-};
-
-export const acceptPickup = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.userId;
-    // Validasi input dari req.body
-    const { orderId } = orderIdSchema.parse(req.body);
-    
-    // Panggil Service (Business Logic)
-    await service.acceptPickup(userId, orderId);
-    
-    res.json({ success: true, message: "Pickup accepted successfully" });
-  } catch (error) {
-    handleError(res, error);
-  }
-};
-
-export const completePickup = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.userId;
-    const { orderId } = orderIdSchema.parse(req.body);
-
-    await service.completePickup(userId, orderId);
-
-    res.json({ success: true, message: "Pickup completed. Laundry at outlet." });
-  } catch (error) {
-    handleError(res, error);
-  }
-};
-
-export const acceptDelivery = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.userId;
-    const { orderId } = orderIdSchema.parse(req.body);
-
-    await service.acceptDelivery(userId, orderId);
-
-    res.json({ success: true, message: "Delivery accepted successfully" });
-  } catch (error) {
-    handleError(res, error);
-  }
-};
-
-export const completeDelivery = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.userId;
-    const { orderId } = orderIdSchema.parse(req.body);
-
-    await service.completeDelivery(userId, orderId);
-
-    res.json({ success: true, message: "Delivery completed successfully" });
-  } catch (error) {
-    handleError(res, error);
-  }
-};
-
-// --- CENTRALIZED ERROR HANDLER ---
-function handleError(res: Response, error: any) {
-  // 1. Validation Error (Zod)
-  if (error instanceof z.ZodError) {
-    return res.status(400).json({ 
-      success: false, 
-      message: "Validation Error", 
-      errors: error.issues 
-    });
-  }
-
-  // 2. Known Business Errors
+function handleDriverError(res: Response, next: NextFunction, error: any) {
   const statusMap: Record<string, number> = {
-    "DRIVER_BUSY": 400,
-    "ORDER_UNAVAILABLE": 409, // Conflict (Rebutan order)
-    "ORDER_NOT_FOUND_OR_INVALID": 404,
-    "OUT_OF_RANGE": 400
+    DRIVER_BUSY: 400,
+    ORDER_UNAVAILABLE: 409,
+    ORDER_NOT_FOUND_OR_INVALID: 404,
   };
-
-  const status = statusMap[error.message] || 500;
-  const message = status === 500 ? "Internal Server Error" : error.message;
-
-  if (status === 500) console.error(error); // Log error server fatal
-
-  res.status(status).json({ success: false, message });
+  const status = statusMap[error.message];
+  if (status) {
+    return res.status(status).json({ success: false, message: error.message });
+  }
+  next(error);
 }

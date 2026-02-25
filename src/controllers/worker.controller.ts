@@ -1,61 +1,113 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import * as workerService from "../services/worker.service";
-import { StationType, EmployeeRole } from "../generated/prisma/client";
+import { StationType, EmployeeRole } from "@prisma/client";
+import { JWTPayload } from "../@types";
 
 const processOrderSchema = z.object({
   orderId: z.string().cuid(),
   station: z.nativeEnum(StationType),
-  items: z.array(z.object({
-    laundryItemId: z.string(),
-    quantity: z.number().int().min(0)
-  })).nonempty()
+  items: z
+    .array(
+      z.object({
+        laundryItemId: z.string(),
+        quantity: z.number().int().min(0),
+      }),
+    )
+    .nonempty(),
 });
 
-//  Worker melihat daftar pesanan yang MASUK ke stationnya
-export const getOrderList = async (req: Request, res: Response) => {
-  try {
-    const user = (req as any).user;
-    const { page, limit } = parsePagination(req.query);
-    const station = mapRoleToStation(user.role); 
-    
-    if (!station) return res.status(400).json({ success: false, message: "Invalid Worker Role" });
+export const workerController = {
+  // Worker melihat daftar pesanan yang masuk ke stationnya
+  async getOrderList(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const station = mapRoleToStation(payload.role as string);
 
-    const result = await workerService.getIncomingOrders(station, page, limit);
-    res.json({ success: true, ...result });
-  } catch (error) { handleError(res, error); }
-};
+      if (!station) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Invalid Worker Role for station access",
+          });
+      }
 
-//  Worker melihat history pekerjaan pribadi
-export const getJobHistory = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.userId;
-    const { page, limit } = parsePagination(req.query);
-    
-    const result = await workerService.getWorkerHistory(userId, page, limit);
-    res.json({ success: true, ...result });
-  } catch (error) { handleError(res, error); }
-};
+      const result = await workerService.getIncomingOrders(
+        station,
+        page,
+        limit,
+      );
+      res.json({ success: true, ...result });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-export const processOrder = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.userId;
-    const { orderId, station, items } = processOrderSchema.parse(req.body);
+  // Worker melihat history pekerjaan pribadi
+  async getJobHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
 
-    const result = await workerService.processStationOrder({
-      workerId: userId, orderId, station, items
-    });
+      const result = await workerService.getWorkerHistory(
+        payload.userId,
+        page,
+        limit,
+      );
+      res.json({ success: true, ...result });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-    res.json({ success: true, message: "Order processed successfully", data: result });
-  } catch (error) { handleError(res, error); }
-};
+  // Worker memproses order di stationnya
+  async processOrder(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const parsed = processOrderSchema.safeParse(req.body);
 
-// --- HELPERS ---
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Validation Error",
+            errors: parsed.error.issues,
+          });
+      }
 
-const parsePagination = (query: any) => {
-  const page = parseInt(query.page as string) || 1;
-  const limit = parseInt(query.limit as string) || 10;
-  return { page, limit };
+      const { orderId, station, items } = parsed.data;
+
+      const result = await workerService.processStationOrder({
+        workerId: payload.userId,
+        orderId,
+        station,
+        items,
+      });
+
+      res.json({
+        success: true,
+        message: "Order processed successfully",
+        data: result,
+      });
+    } catch (error: any) {
+      const statusMap: Record<string, number> = {
+        QTY_MISMATCH: 400,
+        ORDER_NOT_FOUND: 404,
+      };
+      const status = statusMap[error.message];
+      if (status) {
+        return res
+          .status(status)
+          .json({ success: false, message: error.message });
+      }
+      next(error);
+    }
+  },
 };
 
 function mapRoleToStation(role: string): StationType | null {
@@ -63,16 +115,4 @@ function mapRoleToStation(role: string): StationType | null {
   if (role === EmployeeRole.WORKER_IRONING) return StationType.IRONING;
   if (role === EmployeeRole.WORKER_PACKING) return StationType.PACKING;
   return null;
-}
-
-function handleError(res: Response, error: any) {
-  if (error instanceof z.ZodError) {
-    return res.status(400).json({ success: false, errors: error.issues });
-  }
-  const statusMap: Record<string, number> = {
-    "QTY_MISMATCH": 400,
-    "ORDER_NOT_FOUND": 404
-  };
-  const status = statusMap[error.message] || 500;
-  res.status(status).json({ success: false, message: error.message });
 }

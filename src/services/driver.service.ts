@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.config";
-import { OrderStatus } from "../generated/prisma/client";
+import { OrderStatus } from "@prisma/client";
 
 // --- PUBLIC METHODS ---
 
@@ -11,55 +11,58 @@ export const checkAvailability = async (driverId: string) => {
   return { available: true };
 };
 
-// [cite: frontend-gap] Aggregator untuk Frontend "activeJob"
 export const getDriverActiveJob = async (driverId: string) => {
   const job = await getActiveJob(driverId);
   if (!job) return null;
 
-  // Transform ke format Frontend Friendly
   return {
     ...job,
     type: job.pickupDriverId === driverId ? "PICKUP" : "DELIVERY",
   };
 };
 
-// [cite: frontend-gap] Aggregator untuk Frontend "availableJobs"
 export const getAvailableJobs = async () => {
-  // Ambil Pickup yg WAITING DAN Delivery yg READY
   const [pickups, deliveries] = await prisma.$transaction([
     prisma.order.findMany({
-      where: { status: OrderStatus.WAITING_FOR_PICKUP, pickupDriverId: null },
+      where: {
+        status: OrderStatus.WAITING_FOR_PICKUP,
+        pickupDriverId: null,
+        deletedAt: null,
+      },
       include: {
         customer: { select: { fullName: true } },
         address: true,
-        orderItems: true,
+        orderItems: { include: { laundryItem: true } },
       },
       orderBy: { createdAt: "asc" },
     }),
     prisma.order.findMany({
-      where: { status: OrderStatus.READY_FOR_DELIVERY, deliveryDriverId: null },
+      where: {
+        status: OrderStatus.READY_FOR_DELIVERY,
+        deliveryDriverId: null,
+        deletedAt: null,
+      },
       include: {
         customer: { select: { fullName: true } },
         address: true,
-        orderItems: true,
+        orderItems: { include: { laundryItem: true } },
       },
       orderBy: { updatedAt: "asc" },
     }),
   ]);
 
-  // Gabung dan labeli tipe
   return [
     ...pickups.map((p) => ({
       ...p,
       type: "PICKUP",
       customerName: p.customer.fullName,
-      address: p.address.address,
+      customerAddress: p.address.address,
     })),
     ...deliveries.map((d) => ({
       ...d,
       type: "DELIVERY",
       customerName: d.customer.fullName,
-      address: d.address.address,
+      customerAddress: d.address.address,
     })),
   ];
 };
@@ -71,10 +74,14 @@ export const acceptPickup = async (driverId: string, orderId: string) => {
   const res = await prisma.order.updateMany({
     where: {
       id: orderId,
-      status: OrderStatus.WAITING_FOR_PICKUP, // [cite: 65]
-      pickupDriverId: null, // Mencegah race condition
+      status: OrderStatus.WAITING_FOR_PICKUP,
+      pickupDriverId: null,
+      deletedAt: null,
     },
-    data: { pickupDriverId: driverId, status: OrderStatus.PICKUP_ON_THE_WAY }, // [cite: 67]
+    data: {
+      pickupDriverId: driverId,
+      status: OrderStatus.PICKUP_ON_THE_WAY,
+    },
   });
 
   if (res.count === 0) throw new Error("ORDER_UNAVAILABLE");
@@ -82,12 +89,12 @@ export const acceptPickup = async (driverId: string, orderId: string) => {
 };
 
 export const completePickup = async (driverId: string, orderId: string) => {
-  // Verifikasi driver yang request adalah driver yang ambil order
   const order = await prisma.order.findFirst({
     where: {
       id: orderId,
       pickupDriverId: driverId,
       status: OrderStatus.PICKUP_ON_THE_WAY,
+      deletedAt: null,
     },
   });
 
@@ -95,7 +102,7 @@ export const completePickup = async (driverId: string, orderId: string) => {
 
   return await prisma.order.update({
     where: { id: orderId },
-    data: { status: OrderStatus.ARRIVED_AT_OUTLET }, // [cite: 69]
+    data: { status: OrderStatus.ARRIVED_AT_OUTLET },
   });
 };
 
@@ -105,13 +112,14 @@ export const acceptDelivery = async (driverId: string, orderId: string) => {
   const res = await prisma.order.updateMany({
     where: {
       id: orderId,
-      status: OrderStatus.READY_FOR_DELIVERY, // [cite: 79]
+      status: OrderStatus.READY_FOR_DELIVERY,
       deliveryDriverId: null,
+      deletedAt: null,
     },
     data: {
       deliveryDriverId: driverId,
       status: OrderStatus.DELIVERY_ON_THE_WAY,
-    }, // [cite: 81]
+    },
   });
 
   if (res.count === 0) throw new Error("ORDER_UNAVAILABLE");
@@ -119,12 +127,12 @@ export const acceptDelivery = async (driverId: string, orderId: string) => {
 };
 
 export const completeDelivery = async (driverId: string, orderId: string) => {
-  // Driver menyelesaikan tugas delivery
   const order = await prisma.order.findFirst({
     where: {
       id: orderId,
       deliveryDriverId: driverId,
       status: OrderStatus.DELIVERY_ON_THE_WAY,
+      deletedAt: null,
     },
   });
 
@@ -132,11 +140,11 @@ export const completeDelivery = async (driverId: string, orderId: string) => {
 
   return await prisma.order.update({
     where: { id: orderId },
-    data: { status: OrderStatus.RECEIVED_BY_CUSTOMER }, // [cite: 83]
+    data: { status: OrderStatus.RECEIVED_BY_CUSTOMER },
   });
 };
 
-// --- PRIVATE HELPERS (<15 Lines) ---
+// --- PRIVATE HELPERS ---
 
 const getActiveJob = async (driverId: string) => {
   return await prisma.order.findFirst({
@@ -145,16 +153,17 @@ const getActiveJob = async (driverId: string) => {
         { pickupDriverId: driverId, status: OrderStatus.PICKUP_ON_THE_WAY },
         { deliveryDriverId: driverId, status: OrderStatus.DELIVERY_ON_THE_WAY },
       ],
+      deletedAt: null,
     },
     include: {
       customer: { select: { fullName: true } },
       address: true,
-      orderItems: true,
+      orderItems: { include: { laundryItem: true } },
     },
   });
 };
 
 const ensureDriverIdle = async (driverId: string) => {
   const active = await getActiveJob(driverId);
-  if (active) throw new Error("DRIVER_BUSY"); // [cite: 37, 234]
+  if (active) throw new Error("DRIVER_BUSY");
 };

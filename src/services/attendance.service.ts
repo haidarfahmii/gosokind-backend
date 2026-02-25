@@ -1,12 +1,15 @@
 import prisma from "../config/prisma.config";
 import { getDistance } from "geolib";
 
-const MAX_DISTANCE = 500; // meters
+const MAX_DISTANCE = 50000; // meters (50 km)
 
 // --- PUBLIC METHODS ---
 
 export const clockIn = async (userId: string, lat: number, long: number) => {
   const employee = await validateEmployeeAndOutlet(userId);
+  console.log(
+    `[Attendance] Employee: ${employee.fullName} (${employee.role}), Coords: lat=${lat}, lng=${long}`,
+  );
   validateLocation(lat, long, employee.outlet);
   await ensureNoActiveShift(userId);
 
@@ -30,7 +33,8 @@ export const clockOut = async (userId: string) => {
 
 export const getDashboardData = async (employeeId: string, date?: string) => {
   const targetDate = date ? new Date(date) : new Date();
-  const { start, end } = getDayRange(targetDate);
+  const { start, end } = getDayRange(new Date(targetDate));
+
   // 1. Get Today's Latest Attendance (or any active unfinished shift)
   const todayShift = await prisma.attendance.findFirst({
     where: {
@@ -39,13 +43,14 @@ export const getDashboardData = async (employeeId: string, date?: string) => {
     },
     orderBy: { clockIn: "desc" },
   });
+
   // 2. Count Total Unique Days Worked
-  // Group by date to count distinct days
   const totalDaysGroup = await prisma.attendance.groupBy({
     by: ["date"],
     where: { employeeId },
   });
   const daysWorked = totalDaysGroup.length;
+
   // 3. Calc Duration (if clocked out)
   let shiftDuration = null;
   if (todayShift?.clockOut) {
@@ -54,6 +59,7 @@ export const getDashboardData = async (employeeId: string, date?: string) => {
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     shiftDuration = `${hours}h ${minutes}m`;
   }
+
   return {
     todayAttendance: todayShift,
     shiftDuration,
@@ -86,11 +92,13 @@ export const getAllAttendance = async (
   };
 };
 
-// --- PRIVATE HELPERS (Atomic & Reusable) ---
+// --- PRIVATE HELPERS ---
 
 const getDayRange = (date: Date) => {
-  const start = new Date(date.setHours(0, 0, 0, 0));
-  const end = new Date(date.setHours(23, 59, 59, 999));
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
   return { start, end };
 };
 
@@ -105,7 +113,7 @@ const buildWhereClause = (outletId: string, dateStr?: string) => {
 
 const validateEmployeeAndOutlet = async (userId: string) => {
   const emp = await prisma.employee.findUnique({
-    where: { id: userId },
+    where: { id: userId, deletedAt: null },
     include: { outlet: true },
   });
 
@@ -123,6 +131,9 @@ const validateLocation = (
   const dist = getDistance(
     { latitude: lat, longitude: long },
     { latitude: outlet.latitude, longitude: outlet.longitude },
+  );
+  console.log(
+    `[Attendance] Distance: ${dist}m, Max: ${MAX_DISTANCE}m, Outlet: ${outlet.latitude},${outlet.longitude}`,
   );
   if (dist > MAX_DISTANCE) throw new Error("OUT_OF_RANGE");
 };

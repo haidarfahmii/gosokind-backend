@@ -12,10 +12,10 @@ import laundryItemRoute from "./routers/laundry-item.route";
 import orderRoute from "./routers/order.route";
 import customerOrderRoute from "./routers/customer-order.route";
 import reportRoute from "./routers/report.route";
-import attendanceRoute from "./routes/attendance.route";
-import driverRoute from "./routes/driver.route";
-import workerRoute from "./routes/worker.route";
-import bypassRoute from "./routes/bypass.route";
+import attendanceRoute from "./routers/attendance.route";
+import driverRoute from "./routers/driver.route";
+import workerRoute from "./routers/worker.route";
+import notificationRoute from "./routers/notification.route";
 
 import dotenv from "dotenv";
 
@@ -40,10 +40,12 @@ app.use("/api/laundry-items", laundryItemRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/customer/orders", customerOrderRoute);
 app.use("/api/reports", reportRoute);
+
+// Drive + Worker
 app.use("/api/attendance", attendanceRoute);
 app.use("/api/driver", driverRoute);
 app.use("/api/worker", workerRoute);
-app.use("/api/bypass", bypassRoute);
+app.use("/api/notifications", notificationRoute);
 
 // Middleware (Application Level)
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
