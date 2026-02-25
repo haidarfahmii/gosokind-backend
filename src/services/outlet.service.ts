@@ -7,8 +7,28 @@ import {
   OutletResponse,
   CheckLocationInput,
 } from "../@types/outlet.types";
+import { getCityCode } from "../utils/city-code.util";
 
 export const outletService = {
+  async generateOutletCode(city: string): Promise<string> {
+    // ambil kata pertama dari nama kota, uppercase, hapus non-alfanumerik
+    const cityCode = getCityCode(city);
+    const prefix = `OUT-${cityCode}-`;
+
+    // Hitung berapa outlet (termasuk yang sudah dihapus) dengan prefix yang sama
+    // Menggunakan deleted outlets juga agar nomor urut tidak pernah duplikat
+    const existingCount = await prisma.outlet.count({
+      where: {
+        outletCode: {
+          startsWith: prefix,
+        },
+      },
+    });
+
+    const sequence = String(existingCount + 1).padStart(3, "0");
+    return `${prefix}${sequence}`;
+  },
+
   async getAllOutlets(
     page: number,
     limit: number,
@@ -35,6 +55,7 @@ export const outletService = {
         { address: { contains: search, mode: "insensitive" } },
         { city: { contains: search, mode: "insensitive" } },
         { province: { contains: search, mode: "insensitive" } },
+        { outletCode: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -73,6 +94,7 @@ export const outletService = {
     // Format response
     const formattedOutlets: OutletResponse[] = outlets.map((outlet) => ({
       id: outlet.id,
+      outletCode: outlet.outletCode,
       name: outlet.name,
       address: outlet.address,
       province: outlet.province,
@@ -141,6 +163,7 @@ export const outletService = {
 
     return {
       id: outlet.id,
+      outletCode: outlet.outletCode,
       name: outlet.name,
       address: outlet.address,
       province: outlet.province,
@@ -222,9 +245,13 @@ export const outletService = {
       throw AppError(`Outlet with name "${name}" already exists`, 400);
     }
 
+    const cityForCode = city || province || "UNK";
+    const outletCode = await this.generateOutletCode(cityForCode);
+
     // Create outlet
     const outlet = await prisma.outlet.create({
       data: {
+        outletCode,
         name,
         province,
         city,
@@ -250,6 +277,7 @@ export const outletService = {
 
     return {
       id: outlet.id,
+      outletCode: outlet.outletCode,
       name: outlet.name,
       address: outlet.address,
       province: outlet.province,
@@ -334,6 +362,7 @@ export const outletService = {
 
     return {
       id: outlet.id,
+      outletCode: outlet.outletCode,
       name: outlet.name,
       address: outlet.address,
       province: outlet.province,
@@ -396,7 +425,7 @@ export const outletService = {
     scopedOutletId: string | null = null,
     isSuperAdmin: boolean = false,
   ) {
-    // ✅ OUTLET SCOPE ENFORCEMENT
+    // OUTLET SCOPE ENFORCEMENT
     if (!isSuperAdmin && scopedOutletId && outletId !== scopedOutletId) {
       throw AppError(
         "Forbidden: You can only calculate shipping for your own outlet",
@@ -434,6 +463,7 @@ export const outletService = {
     return {
       outlet: {
         id: outlet.id,
+        outletCode: outlet.outletCode,
         name: outlet.name,
         address: outlet.address,
         coordinates: {

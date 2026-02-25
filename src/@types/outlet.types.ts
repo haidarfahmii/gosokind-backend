@@ -58,6 +58,7 @@ export interface UpdateOutletInput {
 
 export interface OutletResponse {
   id: string;
+  outletCode: string;
   name: string;
   province: string | null;
   city: string | null;
