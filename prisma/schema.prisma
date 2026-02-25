@@ -4,15 +4,6 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-// generator client {
-//   provider = "prisma-client"
-//   output   = "../src/generated/prisma"
-// }
-
-// datasource db {
-//   provider = "postgresql"
-// }
-
 
 generator client {
   provider = "prisma-client-js"
@@ -44,22 +35,22 @@ enum OutletStatus {
 // Status pesanan yang sangat rinci untuk tracking
 enum OrderStatus {
   // Pickup Flow
-  WAITING_FOR_PICKUP      // Driver belum ambil
-  PICKUP_ON_THE_WAY       // Driver sedang menjemput/bawa laundry ke outlet
-  ARRIVED_AT_OUTLET       // Sampai di outlet, Admin belum input berat/item
+  WAITING_FOR_PICKUP // Driver belum ambil
+  PICKUP_ON_THE_WAY // Driver sedang menjemput/bawa laundry ke outlet
+  ARRIVED_AT_OUTLET // Sampai di outlet, Admin belum input berat/item
 
   // Processing Flow (Setelah Admin input berat/qty)
-  WASHING                 // Sedang di station cuci (atau menunggu dicuci)
-  IRONING                 // Sedang di station setrika (atau menunggu disetrika)
-  PACKING                 // Sedang di station packing (atau menunggu dipacking)
-  
-  WAITING_FOR_PAYMENT     // Selesai packing, tapi belum lunas
-  READY_FOR_DELIVERY      // Selesai packing & lunas, siap diambil driver
+  WASHING // Sedang di station cuci (atau menunggu dicuci)
+  IRONING // Sedang di station setrika (atau menunggu disetrika)
+  PACKING // Sedang di station packing (atau menunggu dipacking)
+
+  WAITING_FOR_PAYMENT // Selesai packing, tapi belum lunas
+  READY_FOR_DELIVERY // Selesai packing & lunas, siap diambil driver
 
   // Delivery Flow
-  DELIVERY_ON_THE_WAY     // Driver membawa laundry ke customer
-  RECEIVED_BY_CUSTOMER    // Sampai di customer
-  COMPLETED               // Order selesai (setelah konfirmasi user/waktu habis)
+  DELIVERY_ON_THE_WAY // Driver membawa laundry ke customer
+  RECEIVED_BY_CUSTOMER // Sampai di customer
+  COMPLETED // Order selesai (setelah konfirmasi user/waktu habis)
 }
 
 enum StationType {
@@ -115,41 +106,42 @@ model Employee {
   // Operational Relations
   driverPickups    Order[]   @relation("DriverPickup")
   driverDeliveries Order[]   @relation("DriverDelivery")
-  
-  attendances      Attendance[]    // Absen sekarang khusus employee saja
-  bypassRequests   BypassRequest[] @relation("WorkerRequest")
-  handledStations  OrderStationProcess[] // History pekerjaan worker 
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
+  attendances     Attendance[] // Absen sekarang khusus employee saja
+  bypassRequests  BypassRequest[]       @relation("WorkerRequest")
+  handledStations OrderStationProcess[] // History pekerjaan worker 
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@map("employees")
 }
 
 model Address {
-  id          String  @id @default(cuid())
-  label       String  // e.g. "Rumah", "Kantor"
-  address     String  // Alamat lengkap
-  latitude    Float   // Untuk hitung jarak
-  longitude   Float   
-  isPrimary   Boolean @default(false)
+  id        String  @id @default(cuid())
+  label     String // e.g. "Rumah", "Kantor"
+  address   String // Alamat lengkap
+  latitude  Float // Untuk hitung jarak
+  longitude Float
+  isPrimary Boolean @default(false)
 
   // UPDATED: Address now belongs strictly to Customer
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  orders          Order[]     // Tidak perlu relation name jika hanya ada satu relasi ke Order
+  orders Order[] // Tidak perlu relation name jika hanya ada satu relasi ke Order
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@map("addresses")
 }
 
 model Outlet {
   id          String  @id @default(cuid())
+  outletCode  String  @unique 
   name        String
   address     String
   province    String? 
@@ -179,32 +171,32 @@ model LaundryItem {
   category    String? // e.g., "Atasan", "Bawahan", "Linen", etc.
   unit        String? // e.g., "Pcs", "Kg", "Set"
   basePrice   Float?  // Base price per unit
-  
-  // Relations
-  orderItems      OrderItem[]
-  stationChecks   StationItemCheck[] 
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
+  // Relations
+  orderItems    OrderItem[]
+  stationChecks StationItemCheck[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@map("laundry_items")
 }
 
 model Order {
-  id              String      @id @default(cuid())
-  orderNumber     String      @unique // Format: INV-YYYYMMXXX
-  
-  totalWeight     Float?      // Diinput Outlet Admin 
-  totalPrice      Float?      
-  isPaid          Boolean     @default(false)
+  id          String @id @default(cuid())
+  orderNumber String @unique // Format: INV-YYYYMMXXX
+
+  totalWeight Float? // Diinput Outlet Admin 
+  totalPrice  Float?
+  isPaid      Boolean @default(false)
 
   // Payment info untuk Payment Gateway
-  paymentUrl    String?   // Link pembayaran dari Midtrans/Xendit
-  paymentMethod String?   // e.g. "BCA_VA", "GOPAY"
-  
-  status          OrderStatus @default(WAITING_FOR_PICKUP)
-  
+  paymentUrl    String? // Link pembayaran dari Midtrans/Xendit
+  paymentMethod String? // e.g. "BCA_VA", "GOPAY"
+
+  status OrderStatus @default(WAITING_FOR_PICKUP)
+
   // Relations
   customerId      String
   customer        Customer    @relation("CustomerOrder", fields: [customerId], references: [id])
@@ -223,27 +215,28 @@ model Order {
   address         Address     @relation(fields: [addressId], references: [id])
 
   // Data Detail
-  orderItems      OrderItem[]          // Data Qty "Resmi" dari Admin
+  orderItems       OrderItem[] // Data Qty "Resmi" dari Admin
   stationProcesses OrderStationProcess[] // Progress pengerjaan
   bypassRequests   BypassRequest[]
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  deletedAt       DateTime?
+  pickupAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@map("orders")
 }
 
 // Menyimpan Qty yang diinput Admin (Acuan Kebenaran)
 model OrderItem {
-  id            String      @id @default(cuid())
-  orderId       String
-  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
   laundryItemId String
   laundryItem   LaundryItem @relation(fields: [laundryItemId], references: [id])
-  
-  quantity      Int         // Jumlah item resmi
+
+  quantity Int // Jumlah item resmi
 
   @@map("order_items")
 }
@@ -262,21 +255,21 @@ model OrderStationProcess {
   completedAt   DateTime?
 
   // Hasil hitungan worker disimpan di sini
-  itemChecks    StationItemCheck[] 
-  
+  itemChecks StationItemCheck[]
+
   @@map("order_station_processes")
 }
 
 // Menyimpan input hitungan Worker untuk divalidasi 
 model StationItemCheck {
-  id              String      @id @default(cuid())
-  processId       String
-  process         OrderStationProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
-  
-  laundryItemId   String
-  laundryItem     LaundryItem @relation(fields: [laundryItemId], references: [id])
-  
-  inputQuantity   Int         // Qty versi worker
+  id        String              @id @default(cuid())
+  processId String
+  process   OrderStationProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+
+  laundryItemId String
+  laundryItem   LaundryItem @relation(fields: [laundryItemId], references: [id])
+
+  inputQuantity Int // Qty versi worker
 
   @@map("station_item_checks")
 }

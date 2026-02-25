@@ -152,6 +152,7 @@ export const orderQueryService = {
       totalPrice: order.totalPrice,
       isPaid: order.isPaid,
       status: order.status,
+      pickupAt: order.pickupAt,
       customer: order.customer,
       address: order.address,
       outlet: order.outlet,
@@ -274,6 +275,120 @@ export const orderQueryService = {
       totalPrice: order.totalPrice,
       isPaid: order.isPaid,
       status: order.status,
+      pickupAt: order.pickupAt,
+      customer: order.customer,
+      address: order.address,
+      outlet: order.outlet,
+      pickupDriver: order.pickupDriver,
+      deliveryDriver: order.deliveryDriver,
+      orderItems: order.orderItems,
+      stationProcesses: order.stationProcesses,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
+  },
+
+  async getOrderByOrderNumber(
+    orderNumber: string,
+    scopedOutletId: string | null,
+    isSuperAdmin: boolean,
+  ): Promise<OrderResponse> {
+    const order = await prisma.order.findUnique({
+      where: { orderNumber: orderNumber }, // Pastikan orderNumber memiliki atribut @unique di schema prisma Anda
+      include: {
+        customer: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+        address: {
+          select: {
+            id: true,
+            label: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+        outlet: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+          },
+        },
+        pickupDriver: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+        deliveryDriver: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+        orderItems: {
+          include: {
+            laundryItem: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+              },
+            },
+          },
+        },
+        stationProcesses: {
+          include: {
+            worker: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+            itemChecks: {
+              include: {
+                laundryItem: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            startedAt: "asc",
+          },
+        },
+      },
+    });
+
+    if (!order || order.deletedAt !== null) {
+      throw AppError("Order not found", 404);
+    }
+
+    // Validate outlet scope
+    if (!isSuperAdmin && scopedOutletId && order.outletId !== scopedOutletId) {
+      throw AppError(
+        "Forbidden: You can only view orders from your own outlet",
+        403,
+      );
+    }
+
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      totalWeight: order.totalWeight,
+      totalPrice: order.totalPrice,
+      isPaid: order.isPaid,
+      status: order.status,
+      pickupAt: order.pickupAt,
       customer: order.customer,
       address: order.address,
       outlet: order.outlet,

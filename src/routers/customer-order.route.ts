@@ -18,10 +18,12 @@ router.post(
 );
 
 // GET /api/customer/orders - Get customer's orders
-// router.get("/", orderController.getCustomerOrders);
+router.get("/", orderController.getAllOrders);
 
 // GET /api/customer/orders/:id - Get order detail
-// router.get("/:id", orderController.getCustomerOrderById);
+router.get("/:id", orderController.getOrderById);
+
+router.get("/number/:orderNumber", orderController.getOrderByOrderNumber);
 
 // PATCH /api/customer/orders/:id/confirm-delivery
 router.patch("/:id/confirm-delivery", orderController.confirmDelivery);

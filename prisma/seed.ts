@@ -77,6 +77,7 @@ async function main() {
     update: {},
     create: {
       id: "seed-outlet-jaksel-001",
+      outletCode: "OUT-JKT-001",
       name: "Gosokind Outlet - Jakarta Selatan",
       address: "Jl. Kemang Raya No. 45, Kemang, Jakarta Selatan",
       province: "DKI Jakarta",

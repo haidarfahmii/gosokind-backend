@@ -7,6 +7,7 @@ export const combinedOrderController = {
   // Basic CRUD
   getAllOrders: orderController.getAllOrders,
   getOrderById: orderController.getOrderById,
+  getOrderByOrderNumber: orderController.getOrderByOrderNumber,
   createOrderByCustomer: orderController.createOrderByCustomer,
   inputOrderDetails: orderController.inputOrderDetails,
 
