@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.config";
 import { getDistance } from "geolib";
 
-const MAX_DISTANCE = 50000; // meters (50 km)
+const MAX_DISTANCE = 100000; // meters (50 km)
 
 // --- PUBLIC METHODS ---
 

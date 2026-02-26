@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.config";
-import { StationType, OrderStatus } from "@prisma/client";
+import { StationType, OrderStatus, BypassStatus } from "@prisma/client";
 
 interface ProcessOrderPayload {
   orderId: string;
@@ -19,12 +19,21 @@ export const getIncomingOrders = async (
   if (!targetStatus)
     return { data: [], meta: { page, limit, total: 0, lastPage: 0 } };
 
-  const [data, total] = await prisma.$transaction([
+  const [orders, total] = await prisma.$transaction([
     prisma.order.findMany({
       where: { status: targetStatus, deletedAt: null },
       include: {
-        orderItems: { include: { laundryItem: true } },
+        orderItems: {
+          include: { laundryItem: true },
+        },
         customer: { select: { fullName: true, email: true } },
+        bypassRequests: {
+          where: {
+            status: BypassStatus.PENDING,
+            station: station,
+          },
+          select: { id: true },
+        },
       },
       orderBy: { createdAt: "asc" },
       skip: (page - 1) * limit,
@@ -32,6 +41,15 @@ export const getIncomingOrders = async (
     }),
     prisma.order.count({ where: { status: targetStatus, deletedAt: null } }),
   ]);
+
+  const data = orders.map((order) => ({
+    id: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    hasPendingBypass: order.bypassRequests.length > 0,
+    orderItems: order.orderItems,
+    customer: order.customer,
+  }));
 
   return {
     data,
@@ -53,10 +71,15 @@ export const getWorkerHistory = async (
             id: true,
             orderNumber: true,
             status: true,
-            totalWeight: true,
+            orderItems: {
+              include: {
+                laundryItem: {
+                  select: { name: true },
+                },
+              },
+            },
           },
         },
-        itemChecks: { include: { laundryItem: true } },
       },
       orderBy: { completedAt: "desc" },
       skip: (page - 1) * limit,
@@ -73,11 +96,59 @@ export const getWorkerHistory = async (
 
 export const processStationOrder = async (payload: ProcessOrderPayload) => {
   const { orderId, workerId, station, items } = payload;
+
+  // 1. Cek apakah ada bypass PENDING — jika ada, block
+  const pendingBypass = await prisma.bypassRequest.findFirst({
+    where: {
+      orderId,
+      station,
+      status: BypassStatus.PENDING,
+    },
+  });
+
+  if (pendingBypass) {
+    const err: any = new Error("ORDER_ON_HOLD");
+    err.details = [];
+    throw err;
+  }
+
+  // 2. Cek apakah sudah ada StationProcess aktif untuk worker+order+station ini
+  //    Jika belum ada, buat sekarang (menandai worker mulai mengerjakan)
+  let activeProcess = await prisma.orderStationProcess.findFirst({
+    where: {
+      orderId,
+      workerId,
+      station,
+      completedAt: null,
+    },
+  });
+
+  if (!activeProcess) {
+    activeProcess = await prisma.orderStationProcess.create({
+      data: {
+        orderId,
+        workerId,
+        station,
+        startedAt: new Date(),
+      },
+    });
+  }
+
+  // 3. Ambil order items dari database untuk validasi
   const dbOrderItems = await fetchOrderItems(orderId);
 
+  // 4. Validasi qty — jika beda, lempar QTY_MISMATCH
+  //    StationProcess sudah ada, jadi bypass bisa dibuat
   validateItemQuantities(items, dbOrderItems);
 
-  return await createStationProcess(orderId, workerId, station, items);
+  // 5. Qty cocok → selesaikan proses dan update status order
+  return await completeStationProcess(
+    orderId,
+    workerId,
+    station,
+    items,
+    activeProcess.id,
+  );
 };
 
 // --- PRIVATE HELPERS ---
@@ -97,14 +168,40 @@ const validateItemQuantities = (
   inputItems: ProcessOrderPayload["items"],
   dbItems: { laundryItemId: string; quantity: number }[],
 ) => {
-  if (inputItems.length !== dbItems.length) throw new Error("QTY_MISMATCH");
+  const mismatches: { itemId: string; expected: number; actual: number }[] = [];
 
   for (const inputItem of inputItems) {
     const dbItem = dbItems.find(
       (oi) => oi.laundryItemId === inputItem.laundryItemId,
     );
-    if (!dbItem || dbItem.quantity !== inputItem.quantity)
-      throw new Error("QTY_MISMATCH");
+    if (!dbItem || dbItem.quantity !== inputItem.quantity) {
+      mismatches.push({
+        itemId: inputItem.laundryItemId,
+        expected: dbItem?.quantity ?? 0,
+        actual: inputItem.quantity,
+      });
+    }
+  }
+
+  if (inputItems.length !== dbItems.length) {
+    for (const dbItem of dbItems) {
+      const inputItem = inputItems.find(
+        (i) => i.laundryItemId === dbItem.laundryItemId,
+      );
+      if (!inputItem) {
+        mismatches.push({
+          itemId: dbItem.laundryItemId,
+          expected: dbItem.quantity,
+          actual: 0,
+        });
+      }
+    }
+  }
+
+  if (mismatches.length > 0) {
+    const err: any = new Error("QTY_MISMATCH");
+    err.details = mismatches;
+    throw err;
   }
 };
 
@@ -122,11 +219,16 @@ const determineNextStatus = (
   return null;
 };
 
-const createStationProcess = async (
+/**
+ * Menyelesaikan proses station yang sudah ada (completedAt = null),
+ * menyimpan itemChecks, dan mengupdate status order.
+ */
+const completeStationProcess = async (
   orderId: string,
   workerId: string,
   station: StationType,
   items: ProcessOrderPayload["items"],
+  processId: string,
 ) => {
   return await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUniqueOrThrow({
@@ -143,17 +245,10 @@ const createStationProcess = async (
       });
     }
 
-    // Selesaikan proses station sebelumnya jika ada
-    await tx.orderStationProcess.updateMany({
-      where: { orderId, station, completedAt: null },
-      data: { completedAt: new Date() },
-    });
-
-    return await tx.orderStationProcess.create({
+    // Selesaikan proses station yang aktif (sudah dibuat di atas)
+    return await tx.orderStationProcess.update({
+      where: { id: processId },
       data: {
-        orderId,
-        station,
-        workerId,
         completedAt: new Date(),
         itemChecks: {
           create: items.map((i) => ({

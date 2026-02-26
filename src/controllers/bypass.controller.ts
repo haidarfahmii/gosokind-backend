@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import * as bypassService from "../services/bypass.service";
-import { StationType } from "../generated/prisma/client";
+import { StationType } from "@prisma/client";
 
 const bypassSchema = z.object({
   orderId: z.string().cuid(),
@@ -11,7 +11,12 @@ const bypassSchema = z.object({
 
 export const createBypassRequest = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = res.locals.payload?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
     const body = bypassSchema.parse(req.body);
 
     const result = await bypassService.createBypassRequest({
@@ -29,15 +34,32 @@ export const createBypassRequest = async (req: Request, res: Response) => {
 
 function handleError(res: Response, error: any) {
   if (error instanceof z.ZodError) {
-    res.status(400).json({ success: false, errors: error.issues });
-    return;
-  }
-  
-  if (error.message === "ORDER_NOT_FOUND") {
-    res.status(404).json({ success: false, message: "Order not found" });
-    return;
+    return res.status(400).json({
+      success: false,
+      message: "Validation error",
+      errors: error.issues,
+    });
   }
 
-  console.error(error);
+  const errorMap: Record<string, { status: number; message: string }> = {
+    ORDER_NOT_FOUND: {
+      status: 404,
+      message: "Order not found",
+    },
+    ALREADY_HAS_PENDING_BYPASS: {
+      status: 400,
+      message:
+        "You already have a pending bypass request for this order at this station. Please wait for admin review.",
+    },
+  };
+
+  const mapped = errorMap[error.message];
+  if (mapped) {
+    return res
+      .status(mapped.status)
+      .json({ success: false, message: mapped.message });
+  }
+
+  console.error("❌ [BypassController Error]:", error);
   res.status(500).json({ success: false, message: "Internal Server Error" });
 }

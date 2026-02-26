@@ -18,7 +18,6 @@ const processOrderSchema = z.object({
 });
 
 export const workerController = {
-  // Worker melihat daftar pesanan yang masuk ke stationnya
   async getOrderList(req: Request, res: Response, next: NextFunction) {
     try {
       const payload = res.locals.payload as JWTPayload;
@@ -27,12 +26,10 @@ export const workerController = {
       const station = mapRoleToStation(payload.role as string);
 
       if (!station) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Invalid Worker Role for station access",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Invalid Worker Role for station access",
+        });
       }
 
       const result = await workerService.getIncomingOrders(
@@ -46,7 +43,6 @@ export const workerController = {
     }
   },
 
-  // Worker melihat history pekerjaan pribadi
   async getJobHistory(req: Request, res: Response, next: NextFunction) {
     try {
       const payload = res.locals.payload as JWTPayload;
@@ -64,20 +60,17 @@ export const workerController = {
     }
   },
 
-  // Worker memproses order di stationnya
   async processOrder(req: Request, res: Response, next: NextFunction) {
     try {
       const payload = res.locals.payload as JWTPayload;
       const parsed = processOrderSchema.safeParse(req.body);
 
       if (!parsed.success) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Validation Error",
-            errors: parsed.error.issues,
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Validation Error",
+          errors: parsed.error.issues,
+        });
       }
 
       const { orderId, station, items } = parsed.data;
@@ -95,16 +88,31 @@ export const workerController = {
         data: result,
       });
     } catch (error: any) {
-      const statusMap: Record<string, number> = {
-        QTY_MISMATCH: 400,
-        ORDER_NOT_FOUND: 404,
-      };
-      const status = statusMap[error.message];
-      if (status) {
-        return res
-          .status(status)
-          .json({ success: false, message: error.message });
+      // QTY_MISMATCH: frontend akan buka BypassModal
+      if (error.message === "QTY_MISMATCH") {
+        return res.status(400).json({
+          success: false,
+          message: "QTY_MISMATCH",
+          details: error.details || [],
+        });
       }
+
+      // ORDER_ON_HOLD: ada bypass PENDING, order tidak bisa diproses
+      if (error.message === "ORDER_ON_HOLD") {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Order is on hold. There is a pending bypass request waiting for admin approval.",
+        });
+      }
+
+      if (error.message === "ORDER_NOT_FOUND") {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
       next(error);
     }
   },
