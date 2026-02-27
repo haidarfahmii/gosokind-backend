@@ -178,18 +178,6 @@ export const orderCreationService = {
         })),
       });
 
-      //  Buat stationProcess untuk WASHING agar worker bisa bypass
-      // if (input.workerId) {
-      //   await tx.orderStationProcess.create({
-      //     data: {
-      //       orderId,
-      //       station: "WASHING",
-      //       workerId: input.workerId,
-      //       startedAt: new Date(),
-      //     },
-      //   });
-      // }
-
       return updated;
     });
 

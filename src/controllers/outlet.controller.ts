@@ -25,6 +25,22 @@ export const outletController = {
     });
   },
 
+  async getAllOutletsForDropdown(req: Request, res: Response) {
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
+    const outlets = await outletService.getAllOutletsForDropdown(
+      scopedOutletId,
+      isSuperAdmin,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Outlets for dropdown retrieved successfully",
+      data: outlets,
+    });
+  },
+
   async getOutletById(req: Request, res: Response) {
     const { id } = req.params;
 

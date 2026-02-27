@@ -120,6 +120,36 @@ export const outletService = {
     };
   },
 
+  async getAllOutletsForDropdown(
+    scopedOutletId: string | null = null,
+    isSuperAdmin: boolean = false,
+  ): Promise<{ id: string; name: string; outletCode: string }[]> {
+    const where: any = {
+      deletedAt: null,
+      status: "AVAILABLE", // hanya outlet aktif untuk dropdown
+    };
+
+    // Outlet Admin hanya bisa lihat outletnya sendiri
+    if (!isSuperAdmin && scopedOutletId) {
+      where.id = scopedOutletId;
+    }
+
+    const outlets = await prisma.outlet.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        outletCode: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+      // Tidak ada `take` / `skip` — ambil SEMUA outlet untuk dropdown
+    });
+
+    return outlets;
+  },
+
   async getOutletById(
     outletId: string,
     scopedOutletId: string | null = null,

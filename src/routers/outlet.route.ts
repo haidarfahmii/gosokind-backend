@@ -32,6 +32,13 @@ router.get(
   outletController.getAllOutlets,
 );
 
+// Khusus dropdown/select
+router.get(
+  "/all",
+  verifyAdmin(false),
+  outletController.getAllOutletsForDropdown,
+);
+
 router.post(
   "/check-location",
   verifySuperAdmin(true),

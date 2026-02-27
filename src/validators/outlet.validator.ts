@@ -225,9 +225,15 @@ export const calculateShippingValidator = [
     .isString()
     .withMessage("Outlet ID must be a string"),
 
-  body("customerAddressId")
+  body("latitude")
     .notEmpty()
-    .withMessage("Customer address ID is required")
-    .isString()
-    .withMessage("Customer address ID must be a string"),
+    .withMessage("Latitude is required")
+    .isFloat({ min: -90, max: 90 })
+    .withMessage("Latitude must be between -90 and 90"),
+
+  body("longitude")
+    .notEmpty()
+    .withMessage("Longitude is required")
+    .isFloat({ min: -180, max: 180 })
+    .withMessage("Longitude must be between -180 and 180"),
 ];
