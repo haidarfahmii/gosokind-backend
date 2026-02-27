@@ -52,6 +52,17 @@ export const getOrderByIdValidator = [
     .withMessage("Order ID must be a string"),
 ];
 
+// GET /api/orders/number/:orderNumber - Get order by orderNumber
+export const getOrderByOrderNumberValidator = [
+  param("orderNumber")
+    .notEmpty()
+    .withMessage("Order number is required")
+    .isString()
+    .withMessage("Order number must be a string")
+    .matches(/^INV-\d{8}\d+$/)
+    .withMessage("Invalid order number format"),
+];
+
 // POST /api/orders - Create order
 export const createOrderValidator = [
   body("customerId")

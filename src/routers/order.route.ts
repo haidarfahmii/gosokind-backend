@@ -3,7 +3,7 @@ import { combinedOrderController as orderController } from "../controllers/order
 import {
   getAllOrdersValidator,
   getOrderByIdValidator,
-  createOrderValidator,
+  getOrderByOrderNumberValidator,
   updateOrderStatusValidator,
   createBypassRequestValidator,
   handleBypassRequestValidator,
@@ -65,6 +65,19 @@ router.get(
   getAllOrdersValidator,
   expressValidator,
   orderController.getAllOrders,
+);
+
+/**
+ * GET /api/orders/number/:orderNumber
+ * Get order by orderNumber (human-readable, for URL usage)
+ * NOTE: Must come BEFORE /:id to avoid route conflict
+ */
+router.get(
+  "/number/:orderNumber",
+  verifyAdmin(false),
+  getOrderByOrderNumberValidator,
+  expressValidator,
+  orderController.getOrderByOrderNumber,
 );
 
 /**
