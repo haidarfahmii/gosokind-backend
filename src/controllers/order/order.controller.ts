@@ -40,6 +40,29 @@ export const orderController = {
     }
   },
 
+  async getOrdersByCustomer(req: Request, res: Response, next: NextFunction) {
+    try {
+      // Ambil ID customer dari token (diset oleh middleware verifyToken)
+      const customerId = res.locals.payload.userId;
+
+      const query: GetAllOrdersQuery = {
+        page: req.query.page ? parseInt(req.query.page as string) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+        status: req.query.status as any,
+      };
+
+      const result = await orderService.getOrdersByCustomer(customerId, query);
+
+      res.status(200).json({
+        success: true,
+        message: "Customer orders retrieved successfully",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async getOrderById(req: Request, res: Response, next: NextFunction) {
     try {
       const orderId = req.params.id as string;

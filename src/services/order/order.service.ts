@@ -8,6 +8,7 @@ export const orderService = {
 
   // Get all orders with filters and pagination
   getAllOrders: orderQueryService.getAllOrders,
+  getOrdersByCustomer: orderQueryService.getOrdersByCustomer,
   // Get order by ID with full details
   getOrderById: orderQueryService.getOrderById,
   getOrderbyOrderNumber: orderQueryService.getOrderByOrderNumber,
