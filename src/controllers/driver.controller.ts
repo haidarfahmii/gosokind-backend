@@ -33,8 +33,10 @@ export const driverController = {
       const payload = res.locals.payload as JWTPayload;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
+      const sortBy = (req.query.sortBy as "asc" | "desc") || "desc";
+      const timeFilter = (req.query.timeFilter as "all" | "today" | "3_days" | "7_days") || "all";
       
-      const result = await driverService.getDriverHistory(payload.userId, page, limit);
+      const result = await driverService.getDriverHistory(payload.userId, page, limit, sortBy, timeFilter);
       res.json({ success: true, ...result });
     } catch (error) {
       next(error);
@@ -43,8 +45,13 @@ export const driverController = {
 
   async getAvailableJobs(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await driverService.getAvailableJobs();
-      res.json({ success: true, data: result });
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const sortBy = (req.query.sortBy as "asc" | "desc") || "asc";
+      const timeFilter = (req.query.timeFilter as "all" | "today" | "3_days" | "7_days") || "all";
+
+      const result = await driverService.getAvailableJobs(page, limit, sortBy, timeFilter);
+      res.json({ success: true, ...result });
     } catch (error) {
       next(error);
     }

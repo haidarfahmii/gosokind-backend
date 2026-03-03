@@ -23,6 +23,8 @@ export const workerController = {
       const payload = res.locals.payload as JWTPayload;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
+      const sortBy = (req.query.sortBy as "asc" | "desc") || "asc";
+      const timeFilter = (req.query.timeFilter as "all" | "today" | "3_days" | "7_days") || "all";
       const station = mapRoleToStation(payload.role as string);
 
       if (!station) {
@@ -36,6 +38,8 @@ export const workerController = {
         station,
         page,
         limit,
+        sortBy,
+        timeFilter
       );
       res.json({ success: true, ...result });
     } catch (error) {
@@ -48,11 +52,15 @@ export const workerController = {
       const payload = res.locals.payload as JWTPayload;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
+      const sortBy = (req.query.sortBy as "asc" | "desc") || "desc";
+      const timeFilter = (req.query.timeFilter as "all" | "today" | "3_days" | "7_days") || "all";
 
       const result = await workerService.getWorkerHistory(
         payload.userId,
         page,
         limit,
+        sortBy,
+        timeFilter
       );
       res.json({ success: true, ...result });
     } catch (error) {
