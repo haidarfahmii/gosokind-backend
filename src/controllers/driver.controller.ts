@@ -28,6 +28,19 @@ export const driverController = {
     }
   },
 
+  async getJobHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      const result = await driverService.getDriverHistory(payload.userId, page, limit);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async getAvailableJobs(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await driverService.getAvailableJobs();

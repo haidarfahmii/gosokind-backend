@@ -64,7 +64,10 @@ export const getWorkerHistory = async (
 ) => {
   const [data, total] = await prisma.$transaction([
     prisma.orderStationProcess.findMany({
-      where: { workerId },
+      where: { 
+        workerId,
+        completedAt: { not: null }
+      },
       include: {
         order: {
           select: {
@@ -85,7 +88,12 @@ export const getWorkerHistory = async (
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.orderStationProcess.count({ where: { workerId } }),
+    prisma.orderStationProcess.count({ 
+      where: { 
+        workerId,
+        completedAt: { not: null }
+      } 
+    }),
   ]);
 
   return {

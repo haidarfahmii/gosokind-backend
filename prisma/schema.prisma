@@ -4,14 +4,13 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -67,45 +66,45 @@ enum BypassStatus {
 }
 
 model Customer {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String?   // Nullable karena bisa social login 
-  fullName      String
-  avatarUrl     String?
-  isVerified    Boolean   @default(false) // Verifikasi email
-  
+  id         String  @id @default(cuid())
+  email      String  @unique
+  password   String? // Nullable karena bisa social login 
+  fullName   String
+  avatarUrl  String?
+  isVerified Boolean @default(false) // Verifikasi email
+
   // Social Login
-  provider      String?   // Contoh: "google"
-  providerId    String?   // ID unik dari Google (cth: "123445...")
-  
+  provider   String? // Contoh: "google"
+  providerId String? // ID unik dari Google (cth: "123445...")
+
   // Relations
-  addresses     Address[]
-  orders        Order[]   @relation("CustomerOrder")
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
+  addresses Address[]
+  orders    Order[]   @relation("CustomerOrder")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@map("customers")
 }
 
 model Employee {
-  id            String       @id @default(cuid())
-  email         String       @unique
-  password      String       
-  fullName      String
-  avatarUrl     String?
-  
-  role          EmployeeRole
-  isActive      Boolean      @default(true) 
+  id        String  @id @default(cuid())
+  email     String  @unique
+  password  String
+  fullName  String
+  avatarUrl String?
+
+  role     EmployeeRole
+  isActive Boolean      @default(true)
 
   // Relations
-  outletId      String?      // Super Admin tidak memiliki outlet, tapi yang lain nya ada
-  outlet        Outlet?      @relation(fields: [outletId], references: [id])
-  
+  outletId String? // Super Admin tidak memiliki outlet, tapi yang lain nya ada
+  outlet   Outlet? @relation(fields: [outletId], references: [id])
+
   // Operational Relations
-  driverPickups    Order[]   @relation("DriverPickup")
-  driverDeliveries Order[]   @relation("DriverDelivery")
+  driverPickups    Order[] @relation("DriverPickup")
+  driverDeliveries Order[] @relation("DriverDelivery")
 
   attendances     Attendance[] // Absen sekarang khusus employee saja
   bypassRequests  BypassRequest[]       @relation("WorkerRequest")
@@ -140,25 +139,25 @@ model Address {
 }
 
 model Outlet {
-  id          String  @id @default(cuid())
-  outletCode  String  @unique 
-  name        String
-  address     String
-  province    String? 
-  city        String?
-  latitude    Float   
-  longitude   Float   
-  
-  status      OutletStatus @default(AVAILABLE)
+  id         String  @id @default(cuid())
+  outletCode String  @unique
+  name       String
+  address    String
+  province   String?
+  city       String?
+  latitude   Float
+  longitude  Float
+
+  status OutletStatus @default(AVAILABLE)
 
   // Relations
-  employees   Employee[]  // Karyawan di outlet ini
-  orders      Order[] // Pesanan di outlet ini
+  employees Employee[] // Karyawan di outlet ini
+  orders    Order[] // Pesanan di outlet ini
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
-  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
   @@index([status])
   @@index([province, city])
   @@map("outlets")
@@ -166,11 +165,11 @@ model Outlet {
 
 // Master data jenis pakaian
 model LaundryItem {
-  id          String  @id @default(cuid())
-  name        String  // e.g. Kaos, Celana
-  category    String? // e.g., "Atasan", "Bawahan", "Linen", etc.
-  unit        String? // e.g., "Pcs", "Kg", "Set"
-  basePrice   Float?  // Base price per unit
+  id        String  @id @default(cuid())
+  name      String // e.g. Kaos, Celana
+  category  String? // e.g., "Atasan", "Bawahan", "Linen", etc.
+  unit      String? // e.g., "Pcs", "Kg", "Set"
+  basePrice Float? // Base price per unit
 
   // Relations
   orderItems    OrderItem[]
@@ -198,28 +197,28 @@ model Order {
   status OrderStatus @default(WAITING_FOR_PICKUP)
 
   // Relations
-  customerId      String
-  customer        Customer    @relation("CustomerOrder", fields: [customerId], references: [id])
-  
-  outletId        String?
-  outlet          Outlet?     @relation(fields: [outletId], references: [id]) 
+  customerId String
+  customer   Customer @relation("CustomerOrder", fields: [customerId], references: [id])
+
+  outletId String?
+  outlet   Outlet? @relation(fields: [outletId], references: [id])
 
   // Driver pickup dan delivery bisa berbeda orang
-  pickupDriverId  String?
-  pickupDriver    Employee?   @relation("DriverPickup", fields: [pickupDriverId], references: [id])
+  pickupDriverId String?
+  pickupDriver   Employee? @relation("DriverPickup", fields: [pickupDriverId], references: [id])
 
   deliveryDriverId String?
-  deliveryDriver  Employee?   @relation("DriverDelivery", fields: [deliveryDriverId], references: [id])
+  deliveryDriver   Employee? @relation("DriverDelivery", fields: [deliveryDriverId], references: [id])
 
-  addressId       String
-  address         Address     @relation(fields: [addressId], references: [id])
+  addressId String
+  address   Address @relation(fields: [addressId], references: [id])
 
   // Data Detail
   orderItems       OrderItem[] // Data Qty "Resmi" dari Admin
   stationProcesses OrderStationProcess[] // Progress pengerjaan
   bypassRequests   BypassRequest[]
 
-  pickupAt DateTime @default(now())
+  pickupAt  DateTime  @default(now())
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -243,16 +242,16 @@ model OrderItem {
 
 // Mencatat siapa yang mengerjakan station apa & kapan
 model OrderStationProcess {
-  id            String      @id @default(cuid())
-  orderId       String
-  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  station       StationType
+  id      String      @id @default(cuid())
+  orderId String
+  order   Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  station StationType
 
-  workerId      String
-  worker        Employee      @relation(fields: [workerId], references: [id])
-  
-  startedAt     DateTime      @default(now())
-  completedAt   DateTime?
+  workerId String
+  worker   Employee @relation(fields: [workerId], references: [id])
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
 
   // Hasil hitungan worker disimpan di sini
   itemChecks StationItemCheck[]
@@ -276,37 +275,37 @@ model StationItemCheck {
 
 // Request jika hitungan worker beda dengan admin 
 model BypassRequest {
-  id            String        @id @default(cuid())
-  orderId       String
-  order         Order         @relation(fields: [orderId], references: [id])
-  
-  workerId      String
-  worker        Employee      @relation("WorkerRequest", fields: [workerId], references: [id])
-  
-  station       StationType
-  reason        String        // Keterangan problem
-  status        BypassStatus  @default(PENDING)
-  
-  adminNote     String?       // Catatan admin saat approve/reject
-  reviewedBy    String?       // ID Admin yang review
-  
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  workerId String
+  worker   Employee @relation("WorkerRequest", fields: [workerId], references: [id])
+
+  station StationType
+  reason  String // Keterangan problem
+  status  BypassStatus @default(PENDING)
+
+  adminNote  String? // Catatan admin saat approve/reject
+  reviewedBy String? // ID Admin yang review
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("bypass_requests")
 }
 
 // Absensi Harian
 model Attendance {
-  id            String    @id @default(cuid())
-  
-  employeeId    String
-  employee      Employee  @relation(fields: [employeeId], references: [id])
-  
-  clockIn       DateTime  @default(now()) 
-  clockOut      DateTime?
-  
-  date          DateTime  @db.Date // Untuk query laporan per hari
-  
+  id String @id @default(cuid())
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  clockIn  DateTime  @default(now())
+  clockOut DateTime?
+
+  date DateTime @db.Date // Untuk query laporan per hari
+
   @@map("attendances")
 }

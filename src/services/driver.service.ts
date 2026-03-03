@@ -21,6 +21,57 @@ export const getDriverActiveJob = async (driverId: string) => {
   };
 };
 
+export const getDriverHistory = async (driverId: string, page: number, limit: number) => {
+  const [data, total] = await prisma.$transaction([
+    prisma.order.findMany({
+      where: {
+        OR: [
+          {
+            pickupDriverId: driverId,
+            status: { notIn: [OrderStatus.WAITING_FOR_PICKUP, OrderStatus.PICKUP_ON_THE_WAY] },
+          },
+          {
+            deliveryDriverId: driverId,
+            status: { in: [OrderStatus.RECEIVED_BY_CUSTOMER, OrderStatus.COMPLETED] },
+          },
+        ],
+        deletedAt: null,
+      },
+      include: {
+        customer: { select: { fullName: true } },
+        address: true,
+        orderItems: { include: { laundryItem: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.order.count({
+      where: {
+        OR: [
+          {
+            pickupDriverId: driverId,
+            status: { notIn: [OrderStatus.WAITING_FOR_PICKUP, OrderStatus.PICKUP_ON_THE_WAY] },
+          },
+          {
+            deliveryDriverId: driverId,
+            status: { in: [OrderStatus.RECEIVED_BY_CUSTOMER, OrderStatus.COMPLETED] },
+          },
+        ],
+        deletedAt: null,
+      },
+    }),
+  ]);
+
+  return {
+    data: data.map(job => ({
+      ...job,
+      type: job.pickupDriverId === driverId ? "PICKUP" : "DELIVERY",
+    })),
+    meta: { page, limit, total, lastPage: Math.ceil(total / limit) },
+  };
+};
+
 export const getAvailableJobs = async () => {
   const [pickups, deliveries] = await prisma.$transaction([
     prisma.order.findMany({
