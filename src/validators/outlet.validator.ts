@@ -30,44 +30,16 @@ export const createOutletValidator = [
     .withMessage("Address must be at least 10 characters"),
 
   body("latitude")
-    .optional()
+    .notEmpty()
+    .withMessage("Latitude is required. Please pick a location on the map.")
     .isFloat({ min: -90, max: 90 })
     .withMessage("Latitude must be between -90 and 90"),
 
   body("longitude")
-    .optional()
+    .notEmpty()
+    .withMessage("Longitude is required. Please pick a location on the map.")
     .isFloat({ min: -180, max: 180 })
     .withMessage("Longitude must be between -180 and 180"),
-
-  // Custom validator: Jika latitude ada, longitude harus ada juga (vice versa)
-  body("latitude").custom((value, { req }) => {
-    if (value && !req.body.longitude) {
-      throw new Error("Longitude is required when latitude is provided");
-    }
-    return true;
-  }),
-
-  body("longitude").custom((value, { req }) => {
-    if (value && !req.body.latitude) {
-      throw new Error("Latitude is required when longitude is provided");
-    }
-    return true;
-  }),
-
-  // Custom validator: Jika koordinat TIDAK ada, province & city WAJIB
-  body("province").custom((value, { req }) => {
-    if (!req.body.latitude && !req.body.longitude && !value) {
-      throw new Error("Province is required when coordinates are not provided");
-    }
-    return true;
-  }),
-
-  body("city").custom((value, { req }) => {
-    if (!req.body.latitude && !req.body.longitude && !value) {
-      throw new Error("City is required when coordinates are not provided");
-    }
-    return true;
-  }),
 ];
 
 export const updateOutletValidator = [
@@ -157,65 +129,6 @@ export const getAllOutletsValidator = [
     .withMessage("Limit must be between 1 and 100"),
 
   query("search").optional().isString().withMessage("Search must be a string"),
-];
-
-export const checkLocationValidator = [
-  body("province")
-    .optional()
-    .isString()
-    .withMessage("Province must be a string"),
-
-  body("city").optional().isString().withMessage("City must be a string"),
-
-  body("address")
-    .notEmpty()
-    .withMessage("Address is required")
-    .isString()
-    .withMessage("Address must be a string")
-    .isLength({ min: 10 })
-    .withMessage("Address must be at least 10 characters"),
-
-  body("latitude")
-    .optional()
-    .isFloat({ min: -90, max: 90 })
-    .withMessage("Latitude must be between -90 and 90"),
-
-  body("longitude")
-    .optional()
-    .isFloat({ min: -180, max: 180 })
-    .withMessage("Longitude must be between -180 and 180"),
-
-  // Validasi: koordinat harus lengkap atau tidak ada sama sekali
-  body("latitude").custom((value, { req }) => {
-    if (value && !req.body.longitude) {
-      throw new Error("Longitude is required when latitude is provided");
-    }
-    return true;
-  }),
-
-  body("longitude").custom((value, { req }) => {
-    if (value && !req.body.latitude) {
-      throw new Error("Latitude is required when longitude is provided");
-    }
-    return true;
-  }),
-
-  // Validasi: Jika TIDAK ada koordinat manual, province & city WAJIB
-  body("province").custom((value, { req }) => {
-    const hasCoordinates = req.body.latitude && req.body.longitude;
-    if (!hasCoordinates && !value) {
-      throw new Error("Province is required when coordinates are not provided");
-    }
-    return true;
-  }),
-
-  body("city").custom((value, { req }) => {
-    const hasCoordinates = req.body.latitude && req.body.longitude;
-    if (!hasCoordinates && !value) {
-      throw new Error("City is required when coordinates are not provided");
-    }
-    return true;
-  }),
 ];
 
 export const calculateShippingValidator = [

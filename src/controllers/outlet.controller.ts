@@ -60,24 +60,6 @@ export const outletController = {
     });
   },
 
-  async checkLocation(req: Request, res: Response) {
-    const { province, city, address, latitude, longitude } = req.body;
-
-    const result = await outletService.checkLocation({
-      province,
-      city,
-      address,
-      latitude,
-      longitude,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Location checked successfully",
-      data: result,
-    });
-  },
-
   async createOutlet(req: Request, res: Response) {
     const { name, province, city, address, latitude, longitude, status } =
       req.body;

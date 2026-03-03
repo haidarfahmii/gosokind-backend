@@ -5,7 +5,6 @@ import {
   CreateOutletInput,
   UpdateOutletInput,
   OutletResponse,
-  CheckLocationInput,
 } from "../@types/outlet.types";
 import { getCityCode } from "../utils/city-code.util";
 
@@ -209,51 +208,17 @@ export const outletService = {
     };
   },
 
-  async checkLocation(input: CheckLocationInput) {
-    const { province, city, address, latitude, longitude } = input;
-
-    // Jika latitude & longitude diberikan, validate
-    if (latitude && longitude) {
-      const isValid = geoService.validateCoordinates(latitude, longitude);
-      if (!isValid) {
-        throw AppError("Invalid coordinates", 400);
-      }
-
-      // Reverse geocode untuk validasi
-      const formattedAddress = await geoService.reverseGeocode(
-        latitude,
-        longitude,
-      );
-
-      return {
-        latitude,
-        longitude,
-        formattedAddress,
-        message: "Coordinates validated successfully",
-      };
-    }
-
-    // Jika tidak ada coordinates, geocode dari address
-    if (!address || !city || !province) {
-      throw AppError(
-        "Either provide coordinates OR complete address (province, city, address)",
-        400,
-      );
-    }
-
-    const geocoded = await geoService.geocode({ address, city, province });
-
-    return {
-      latitude: geocoded.latitude,
-      longitude: geocoded.longitude,
-      formattedAddress: geocoded.formattedAddress,
-      message: "Location geocoded successfully",
-    };
-  },
-
   async createOutlet(input: CreateOutletInput): Promise<OutletResponse> {
     const { name, province, city, address, latitude, longitude, status } =
       input;
+
+    // Validasi koordinat wajib ada (dikirim dari Leaflet)
+    if (latitude === undefined || longitude === undefined) {
+      throw AppError(
+        "Latitude and longitude are required. Please pick a location on the map.",
+        400,
+      );
+    }
 
     // Validate coordinates
     if (!geoService.validateCoordinates(latitude, longitude)) {
@@ -337,7 +302,7 @@ export const outletService = {
     }
 
     // Validate coordinates if provided
-    if (input.latitude && input.longitude) {
+    if (input.latitude !== undefined && input.longitude !== undefined) {
       if (!geoService.validateCoordinates(input.latitude, input.longitude)) {
         throw AppError("Invalid coordinates", 400);
       }
