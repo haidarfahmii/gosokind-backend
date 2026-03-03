@@ -15,6 +15,7 @@ import attendanceRoute from "./routes/attendance.route";
 import driverRoute from "./routes/driver.route";
 import workerRoute from "./routes/worker.route";
 import bypassRoute from "./routes/bypass.route";
+import paymentRouter from "./routers/payment.route";
 
 import dotenv from "dotenv";
 
@@ -42,6 +43,7 @@ app.use("/api/attendance", attendanceRoute);
 app.use("/api/driver", driverRoute);
 app.use("/api/worker", workerRoute);
 app.use("/api/bypass", bypassRoute);
+app.use("/api/payment", paymentRouter)
 
 // Middleware (Application Level)
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
