@@ -18,6 +18,12 @@ router.use(verifyRole([EmployeeRole.DRIVER]));
 router.get("/active", driverController.getActiveJob);
 
 /**
+ * GET /api/driver/history
+ * Cek job history driver (pickup/delivery yang sudah selesai)
+ */
+router.get("/history", driverController.getJobHistory);
+
+/**
  * GET /api/driver/available
  * Lihat semua order yang tersedia untuk diambil (WAITING_FOR_PICKUP & READY_FOR_DELIVERY)
  */

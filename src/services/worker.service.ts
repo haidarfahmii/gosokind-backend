@@ -14,14 +14,36 @@ export const getIncomingOrders = async (
   station: StationType,
   page: number,
   limit: number,
+  sortBy: "asc" | "desc" = "asc",
+  timeFilter: "all" | "today" | "3_days" | "7_days" = "all",
 ) => {
   const targetStatus = getStatusForStation(station);
   if (!targetStatus)
     return { data: [], meta: { page, limit, total: 0, lastPage: 0 } };
 
+  let dateFilter = {};
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (timeFilter === "today") {
+    dateFilter = { gte: today };
+  } else if (timeFilter === "3_days") {
+    const threeDaysAgo = new Date(today);
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    dateFilter = { gte: threeDaysAgo };
+  } else if (timeFilter === "7_days") {
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    dateFilter = { gte: sevenDaysAgo };
+  }
+
   const [orders, total] = await prisma.$transaction([
     prisma.order.findMany({
-      where: { status: targetStatus, deletedAt: null },
+      where: { 
+        status: targetStatus, 
+        deletedAt: null,
+        ...(timeFilter !== "all" ? { updatedAt: dateFilter } : {}),
+      },
       include: {
         orderItems: {
           include: { laundryItem: true },
@@ -35,11 +57,17 @@ export const getIncomingOrders = async (
           select: { id: true },
         },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { updatedAt: sortBy },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.order.count({ where: { status: targetStatus, deletedAt: null } }),
+    prisma.order.count({ 
+      where: { 
+        status: targetStatus, 
+        deletedAt: null,
+        ...(timeFilter !== "all" ? { updatedAt: dateFilter } : {}),
+      } 
+    }),
   ]);
 
   const data = orders.map((order) => ({
@@ -61,10 +89,31 @@ export const getWorkerHistory = async (
   workerId: string,
   page: number,
   limit: number,
+  sortBy: "asc" | "desc" = "desc",
+  timeFilter: "all" | "today" | "3_days" | "7_days" = "all",
 ) => {
+  let dateFilter = {};
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (timeFilter === "today") {
+    dateFilter = { gte: today };
+  } else if (timeFilter === "3_days") {
+    const threeDaysAgo = new Date(today);
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    dateFilter = { gte: threeDaysAgo };
+  } else if (timeFilter === "7_days") {
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    dateFilter = { gte: sevenDaysAgo };
+  }
+
   const [data, total] = await prisma.$transaction([
     prisma.orderStationProcess.findMany({
-      where: { workerId },
+      where: { 
+        workerId,
+        completedAt: { not: null, ...(timeFilter !== "all" ? dateFilter : {}) },
+      },
       include: {
         order: {
           select: {
@@ -81,11 +130,16 @@ export const getWorkerHistory = async (
           },
         },
       },
-      orderBy: { completedAt: "desc" },
+      orderBy: { completedAt: sortBy },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.orderStationProcess.count({ where: { workerId } }),
+    prisma.orderStationProcess.count({ 
+      where: { 
+        workerId,
+        completedAt: { not: null, ...(timeFilter !== "all" ? dateFilter : {}) },
+      } 
+    }),
   ]);
 
   return {

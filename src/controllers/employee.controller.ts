@@ -160,4 +160,26 @@ export const employeeController = {
       data: employee,
     });
   },
+  async getEmployeeHistory(req: Request, res: Response) {
+    const { id } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
+    const result = await employeeService.getEmployeeHistory(
+      id as string,
+      page,
+      limit,
+      scopedOutletId,
+      isSuperAdmin
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Employee history retrieved successfully",
+      ...result,
+    });
+  },
 };

@@ -57,6 +57,12 @@ router.get(
   employeeController.getEmployeeById,
 );
 
+router.get(
+  "/:id/history",
+  verifyAdmin(false),
+  employeeController.getEmployeeHistory
+);
+
 router.put(
   "/:id",
   verifyAdmin(false),

@@ -8,6 +8,8 @@ import {
   EmployeeListQuery,
 } from "../@types/employee.types";
 import { EmployeeRole } from "@prisma/client";
+import { getDriverHistory } from "./driver.service";
+import { getWorkerHistory } from "./worker.service";
 
 export const employeeService = {
   async createEmployee(
@@ -542,5 +544,48 @@ export const employeeService = {
       createdAt: updatedEmployee.createdAt,
       updatedAt: updatedEmployee.updatedAt,
     };
+  },
+  async getEmployeeHistory(
+    employeeId: string,
+    page: number,
+    limit: number,
+    scopedOutletId: string | null = null,
+    isSuperAdmin: boolean = false
+  ) {
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId, deletedAt: null },
+      select: {
+        id: true,
+        role: true,
+        outletId: true
+      }
+    });
+
+    if (!employee) {
+      throw AppError("Employee not found", 404);
+    }
+
+    // Role validation
+    const allowedRoles: EmployeeRole[] = [
+      EmployeeRole.DRIVER, 
+      EmployeeRole.WORKER_WASHING, 
+      EmployeeRole.WORKER_IRONING, 
+      EmployeeRole.WORKER_PACKING
+    ];
+    if (!allowedRoles.includes(employee.role)) {
+      throw AppError("History is only available for Drivers and Workers", 400);
+    }
+
+    // Outlet validation
+    if (!isSuperAdmin && scopedOutletId && employee.outletId !== scopedOutletId) {
+       throw AppError("Forbidden: You can only view history of employees in your own outlet", 403);
+    }
+
+    // Fetch matching history based on role
+    if (employee.role === EmployeeRole.DRIVER) {
+       return await getDriverHistory(employee.id, page, limit);
+    } else {
+       return await getWorkerHistory(employee.id as string, page, limit); 
+    }
   },
 };
