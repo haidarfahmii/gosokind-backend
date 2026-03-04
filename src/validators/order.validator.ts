@@ -58,9 +58,9 @@ export const getOrderByOrderNumberValidator = [
     .notEmpty()
     .withMessage("Order number is required")
     .isString()
-    .withMessage("Order number must be a string")
-    .matches(/^INV-\d{8}\d+$/)
-    .withMessage("Invalid order number format"),
+    .withMessage("Order number must be a string"),
+  // .matches(/^INV-\d{8}\d+$/)
+  // .withMessage("Invalid order number format"),
 ];
 
 // POST /api/orders - Create order
