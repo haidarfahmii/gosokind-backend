@@ -62,6 +62,15 @@ export const orderCreationService = {
     // 4. Generate order number
     const orderNumber = await generateOrderNumber();
 
+    let initialStatus: OrderStatus = OrderStatus.WAITING_FOR_PICKUP;
+    const now = new Date();
+    const pickupDate = input.pickupAt ? new Date(input.pickupAt) : new Date();
+
+    // Jika ada input pickupAt dan waktunya lebih besar dari waktu sekarang (masa depan)
+    if (input.pickupAt && pickupDate > now) {
+      initialStatus = OrderStatus.SCHEDULED_FOR_PICKUP;
+    }
+
     // 5. Create the order with the automatically selected outletId
     const order = await prisma.order.create({
       data: {
@@ -71,7 +80,7 @@ export const orderCreationService = {
         outletId: nearestOutlet.id, // Use the nearest outlet found
         totalWeight: null,
         totalPrice: null,
-        status: OrderStatus.WAITING_FOR_PICKUP,
+        status: initialStatus,
         pickupAt: input.pickupAt ? new Date(input.pickupAt) : new Date()
       },
     });
@@ -195,5 +204,5 @@ export const orderCreationService = {
     return orderQueryService.getOrderById(updatedOrder.id, outletId, false);
   },
 
-  
+
 };

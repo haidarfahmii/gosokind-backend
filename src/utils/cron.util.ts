@@ -32,18 +32,52 @@ export async function checkAutoCompletionOrders() {
     }
 }
 
+export async function checkScheduledPickups() {
+    try {
+        const now = new Date();
+
+        // Cari order yang masih SCHEDULED tapi waktunya sudah lewat atau sekarang
+        const result = await prisma.order.updateMany({
+            where: {
+                status: OrderStatus.SCHEDULED_FOR_PICKUP, // Status baru
+                pickupAt: {
+                    lte: now, // Less than or equal to now (Waktunya sudah tiba/lewat)
+                },
+                deletedAt: null,
+            },
+            data: {
+                status: OrderStatus.WAITING_FOR_PICKUP, // Ubah jadi siap dipickup
+                updatedAt: new Date(),
+            },
+        });
+
+        if (result.count > 0) {
+            console.log(`✅ [CRON] Moved ${result.count} scheduled orders to WAITING_FOR_PICKUP.`);
+        }
+        // Opsional: else { console.log("No scheduled orders due."); }
+
+    } catch (error) {
+        console.error("❌ [CRON] Error in checkScheduledPickups:", error);
+    }
+}
+
 /**
  * Mulai semua cron job
  */
 export function startCronJobs() {
     console.log("🚀 [CRON] Cron jobs started");
 
-    // Jalankan sekali saat server baru nyala
+    // Jalankan sekali saat server nyala
     checkAutoCompletionOrders();
+    checkScheduledPickups(); 
 
-    // Jalankan secara berkala (setiap 1 jam)
-    const INTERVAL = 60 * 60 * 1000; // 1 jam
+    // 1. Cron Auto-Complete (Per 1 Jam)
     setInterval(() => {
         checkAutoCompletionOrders();
-    }, INTERVAL);
+    }, 60 * 60 * 1000);
+
+    // 2. Cron Schedule Checker (Per 1 Menit)
+    setInterval(() => {
+        checkScheduledPickups();
+    }, 60 * 1000); // Cek setiap 1 menit
 }
