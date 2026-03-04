@@ -6,7 +6,6 @@ import {
   deleteOutletValidator,
   getOutletByIdValidator,
   getAllOutletsValidator,
-  checkLocationValidator,
   calculateShippingValidator,
 } from "../validators/outlet.validator";
 import { expressValidator } from "../middlewares/express-validator.middleware";
@@ -32,12 +31,11 @@ router.get(
   outletController.getAllOutlets,
 );
 
-router.post(
-  "/check-location",
-  verifySuperAdmin(true),
-  checkLocationValidator,
-  expressValidator,
-  outletController.checkLocation,
+// Khusus dropdown/select
+router.get(
+  "/all",
+  verifyAdmin(false),
+  outletController.getAllOutletsForDropdown,
 );
 
 router.get(

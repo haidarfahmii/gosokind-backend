@@ -5,10 +5,29 @@ import {
   CreateOutletInput,
   UpdateOutletInput,
   OutletResponse,
-  CheckLocationInput,
 } from "../@types/outlet.types";
+import { getCityCode } from "../utils/city-code.util";
 
 export const outletService = {
+  async generateOutletCode(city: string): Promise<string> {
+    // ambil kata pertama dari nama kota, uppercase, hapus non-alfanumerik
+    const cityCode = getCityCode(city);
+    const prefix = `OUT-${cityCode}-`;
+
+    // Hitung berapa outlet (termasuk yang sudah dihapus) dengan prefix yang sama
+    // Menggunakan deleted outlets juga agar nomor urut tidak pernah duplikat
+    const existingCount = await prisma.outlet.count({
+      where: {
+        outletCode: {
+          startsWith: prefix,
+        },
+      },
+    });
+
+    const sequence = String(existingCount + 1).padStart(3, "0");
+    return `${prefix}${sequence}`;
+  },
+
   async getAllOutlets(
     page: number,
     limit: number,
@@ -35,6 +54,7 @@ export const outletService = {
         { address: { contains: search, mode: "insensitive" } },
         { city: { contains: search, mode: "insensitive" } },
         { province: { contains: search, mode: "insensitive" } },
+        { outletCode: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -73,6 +93,7 @@ export const outletService = {
     // Format response
     const formattedOutlets: OutletResponse[] = outlets.map((outlet) => ({
       id: outlet.id,
+      outletCode: outlet.outletCode,
       name: outlet.name,
       address: outlet.address,
       province: outlet.province,
@@ -96,6 +117,36 @@ export const outletService = {
         totalPages: Math.ceil(total / limit),
       },
     };
+  },
+
+  async getAllOutletsForDropdown(
+    scopedOutletId: string | null = null,
+    isSuperAdmin: boolean = false,
+  ): Promise<{ id: string; name: string; outletCode: string }[]> {
+    const where: any = {
+      deletedAt: null,
+      status: "AVAILABLE", // hanya outlet aktif untuk dropdown
+    };
+
+    // Outlet Admin hanya bisa lihat outletnya sendiri
+    if (!isSuperAdmin && scopedOutletId) {
+      where.id = scopedOutletId;
+    }
+
+    const outlets = await prisma.outlet.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        outletCode: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+      // Tidak ada `take` / `skip` — ambil SEMUA outlet untuk dropdown
+    });
+
+    return outlets;
   },
 
   async getOutletById(
@@ -141,6 +192,7 @@ export const outletService = {
 
     return {
       id: outlet.id,
+      outletCode: outlet.outletCode,
       name: outlet.name,
       address: outlet.address,
       province: outlet.province,
@@ -156,51 +208,17 @@ export const outletService = {
     };
   },
 
-  async checkLocation(input: CheckLocationInput) {
-    const { province, city, address, latitude, longitude } = input;
-
-    // Jika latitude & longitude diberikan, validate
-    if (latitude && longitude) {
-      const isValid = geoService.validateCoordinates(latitude, longitude);
-      if (!isValid) {
-        throw AppError("Invalid coordinates", 400);
-      }
-
-      // Reverse geocode untuk validasi
-      const formattedAddress = await geoService.reverseGeocode(
-        latitude,
-        longitude,
-      );
-
-      return {
-        latitude,
-        longitude,
-        formattedAddress,
-        message: "Coordinates validated successfully",
-      };
-    }
-
-    // Jika tidak ada coordinates, geocode dari address
-    if (!address || !city || !province) {
-      throw AppError(
-        "Either provide coordinates OR complete address (province, city, address)",
-        400,
-      );
-    }
-
-    const geocoded = await geoService.geocode({ address, city, province });
-
-    return {
-      latitude: geocoded.latitude,
-      longitude: geocoded.longitude,
-      formattedAddress: geocoded.formattedAddress,
-      message: "Location geocoded successfully",
-    };
-  },
-
   async createOutlet(input: CreateOutletInput): Promise<OutletResponse> {
     const { name, province, city, address, latitude, longitude, status } =
       input;
+
+    // Validasi koordinat wajib ada (dikirim dari Leaflet)
+    if (latitude === undefined || longitude === undefined) {
+      throw AppError(
+        "Latitude and longitude are required. Please pick a location on the map.",
+        400,
+      );
+    }
 
     // Validate coordinates
     if (!geoService.validateCoordinates(latitude, longitude)) {
@@ -222,9 +240,13 @@ export const outletService = {
       throw AppError(`Outlet with name "${name}" already exists`, 400);
     }
 
+    const cityForCode = city || province || "UNK";
+    const outletCode = await this.generateOutletCode(cityForCode);
+
     // Create outlet
     const outlet = await prisma.outlet.create({
       data: {
+        outletCode,
         name,
         province,
         city,
@@ -250,6 +272,7 @@ export const outletService = {
 
     return {
       id: outlet.id,
+      outletCode: outlet.outletCode,
       name: outlet.name,
       address: outlet.address,
       province: outlet.province,
@@ -279,7 +302,7 @@ export const outletService = {
     }
 
     // Validate coordinates if provided
-    if (input.latitude && input.longitude) {
+    if (input.latitude !== undefined && input.longitude !== undefined) {
       if (!geoService.validateCoordinates(input.latitude, input.longitude)) {
         throw AppError("Invalid coordinates", 400);
       }
@@ -334,6 +357,7 @@ export const outletService = {
 
     return {
       id: outlet.id,
+      outletCode: outlet.outletCode,
       name: outlet.name,
       address: outlet.address,
       province: outlet.province,
@@ -396,7 +420,7 @@ export const outletService = {
     scopedOutletId: string | null = null,
     isSuperAdmin: boolean = false,
   ) {
-    // ✅ OUTLET SCOPE ENFORCEMENT
+    // OUTLET SCOPE ENFORCEMENT
     if (!isSuperAdmin && scopedOutletId && outletId !== scopedOutletId) {
       throw AppError(
         "Forbidden: You can only calculate shipping for your own outlet",
@@ -434,6 +458,7 @@ export const outletService = {
     return {
       outlet: {
         id: outlet.id,
+        outletCode: outlet.outletCode,
         name: outlet.name,
         address: outlet.address,
         coordinates: {

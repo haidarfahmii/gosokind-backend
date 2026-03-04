@@ -25,6 +25,22 @@ export const outletController = {
     });
   },
 
+  async getAllOutletsForDropdown(req: Request, res: Response) {
+    const scopedOutletId = res.locals.scopedOutletId;
+    const isSuperAdmin = res.locals.isSuperAdmin;
+
+    const outlets = await outletService.getAllOutletsForDropdown(
+      scopedOutletId,
+      isSuperAdmin,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Outlets for dropdown retrieved successfully",
+      data: outlets,
+    });
+  },
+
   async getOutletById(req: Request, res: Response) {
     const { id } = req.params;
 
@@ -41,24 +57,6 @@ export const outletController = {
       success: true,
       message: "Outlet retrieved successfully",
       data: outlet,
-    });
-  },
-
-  async checkLocation(req: Request, res: Response) {
-    const { province, city, address, latitude, longitude } = req.body;
-
-    const result = await outletService.checkLocation({
-      province,
-      city,
-      address,
-      latitude,
-      longitude,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Location checked successfully",
-      data: result,
     });
   },
 
