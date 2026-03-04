@@ -189,9 +189,12 @@ export const orderQueryService = {
       customerId: customerId,
     };
 
-    // Filter Status (jika user memilih tab 'Selesai' atau 'Aktif')
     if (query.status) {
       where.status = query.status;
+    } else {
+      where.status = {
+        not: "COMPLETED"
+      };
     }
 
     // Get total count

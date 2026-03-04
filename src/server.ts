@@ -18,6 +18,7 @@ import bypassRoute from "./routes/bypass.route";
 import paymentRouter from "./routers/payment.route";
 
 import dotenv from "dotenv";
+import { startCronJobs } from "./utils/cron.util";
 
 dotenv.config();
 
@@ -76,6 +77,8 @@ app.use((req: Request, res: Response) => {
     message: `Endpoint ${req.method} ${req.path} not found`,
   });
 });
+
+startCronJobs();
 
 // Global Error Handler (must be last)
 app.use(errorHandler);
