@@ -6,6 +6,7 @@ export { orderController, orderStatusController, bypassController };
 export const combinedOrderController = {
   // Basic CRUD
   getAllOrders: orderController.getAllOrders,
+  getOrdersByCustomer: orderController.getOrdersByCustomer,
   getOrderById: orderController.getOrderById,
   getOrderByOrderNumber: orderController.getOrderByOrderNumber,
   createOrderByCustomer: orderController.createOrderByCustomer,

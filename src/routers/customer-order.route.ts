@@ -18,7 +18,7 @@ router.post(
 );
 
 // GET /api/customer/orders - Get customer's orders
-router.get("/", orderController.getAllOrders);
+router.get("/", orderController.getOrdersByCustomer);
 
 // GET /api/customer/orders/:id - Get order detail
 router.get("/:id", orderController.getOrderById);

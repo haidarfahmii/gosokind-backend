@@ -63,6 +63,7 @@ export function validateStatusTransition(
   newStatus: OrderStatus,
 ): void {
   const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+    SCHEDULED_FOR_PICKUP: [OrderStatus.SCHEDULED_FOR_PICKUP],
     WAITING_FOR_PICKUP: [OrderStatus.PICKUP_ON_THE_WAY],
     PICKUP_ON_THE_WAY: [OrderStatus.ARRIVED_AT_OUTLET],
     ARRIVED_AT_OUTLET: [OrderStatus.WASHING],
@@ -174,6 +175,7 @@ export function isDriverStatus(status: OrderStatus): boolean {
 // Get human-readable status message
 export function getStatusMessage(status: OrderStatus): string {
   const messages: Record<OrderStatus, string> = {
+    SCHEDULED_FOR_PICKUP: "Waiting for the scheduled pickup",
     WAITING_FOR_PICKUP: "Waiting for driver to pickup your laundry",
     PICKUP_ON_THE_WAY: "Driver is on the way to pick up your laundry",
     ARRIVED_AT_OUTLET: "Laundry arrived at outlet, waiting for processing",

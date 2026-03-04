@@ -16,8 +16,10 @@ import attendanceRoute from "./routers/attendance.route";
 import driverRoute from "./routers/driver.route";
 import workerRoute from "./routers/worker.route";
 import notificationRoute from "./routers/notification.route";
+import paymentRouter from "./routers/payment.route";
 
 import dotenv from "dotenv";
+import { startCronJobs } from "./utils/cron.util";
 
 dotenv.config();
 
@@ -46,6 +48,7 @@ app.use("/api/attendance", attendanceRoute);
 app.use("/api/driver", driverRoute);
 app.use("/api/worker", workerRoute);
 app.use("/api/notifications", notificationRoute);
+app.use("/api/payment", paymentRouter);
 
 // Middleware (Application Level)
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -78,6 +81,8 @@ app.use((req: Request, res: Response) => {
     message: `Endpoint ${req.method} ${req.path} not found`,
   });
 });
+
+startCronJobs();
 
 // Global Error Handler (must be last)
 app.use(errorHandler);
