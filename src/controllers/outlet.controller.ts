@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { outletService } from "../services/outlet.service";
+import { outletService } from "../services/outlet";
 
 export const outletController = {
   async getAllOutlets(req: Request, res: Response) {
