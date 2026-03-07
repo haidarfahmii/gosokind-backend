@@ -126,4 +126,35 @@ export const attendanceController = {
       next(error);
     }
   },
+
+  async getHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const { userId, role } = payload;
+      const queryId = req.query.employeeId as string;
+      const date = req.query.date as string | undefined;
+
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      let targetId = userId;
+      if (
+        role === EmployeeRole.SUPER_ADMIN ||
+        role === EmployeeRole.OUTLET_ADMIN
+      ) {
+        targetId = queryId || userId;
+      }
+
+      const result = await attendanceService.getEmployeeHistory(
+        targetId,
+        page,
+        limit,
+        date
+      );
+
+      res.json({ success: true, ...result });
+    } catch (error) {
+      next(error);
+    }
+  },
 };

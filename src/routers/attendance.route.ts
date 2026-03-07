@@ -32,6 +32,15 @@ router.post("/clock-out", attendanceController.clockOut);
 router.get("/dashboard", attendanceController.getDashboard);
 
 /**
+ * GET /api/attendance/history
+ * Lihat seluruh riwayat absensi diri sendiri (History Tab)
+ * - Employee: hanya riwayat sendiri
+ * - Admin/Super Admin: bisa query ?employeeId=xxx
+ * Query: ?page=1&limit=10&date=2025-01-01
+ */
+router.get("/history", attendanceController.getHistory);
+
+/**
  * GET /api/attendance
  * Lihat semua attendance per outlet (hanya Admin)
  * Query: ?date=2025-01-01&page=1&limit=10

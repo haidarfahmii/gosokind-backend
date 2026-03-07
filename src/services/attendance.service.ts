@@ -92,6 +92,34 @@ export const getAllAttendance = async (
   };
 };
 
+export const getEmployeeHistory = async (
+  employeeId: string,
+  page: number,
+  limit: number,
+  date?: string
+) => {
+  const whereClause: any = { employeeId };
+  if (date) {
+    const { start, end } = getDayRange(new Date(date));
+    whereClause.date = { gte: start, lte: end };
+  }
+
+  const [data, total] = await prisma.$transaction([
+    prisma.attendance.findMany({
+      where: whereClause,
+      orderBy: { clockIn: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.attendance.count({ where: whereClause }),
+  ]);
+
+  return {
+    data,
+    meta: { page, limit, total, lastPage: Math.ceil(total / limit) || 1 },
+  };
+};
+
 // --- PRIVATE HELPERS ---
 
 const getDayRange = (date: Date) => {
