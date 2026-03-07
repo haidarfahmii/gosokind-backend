@@ -4,6 +4,7 @@ import { verifyToken } from "../middlewares/verify.token.middleware";
 import { verifyRole } from "../middlewares/verify.role.middleware";
 import { JWT_SECRET } from "../config/index.config";
 import { EmployeeRole } from "@prisma/client";
+import { actionLimiter } from "../middlewares/rate.limiter.middleware";
 
 const router = Router();
 
@@ -40,27 +41,27 @@ router.get("/availability", driverController.checkAvailability);
  * Driver menerima order pickup
  * Body: { orderId: string }
  */
-router.post("/pickup/accept", driverController.acceptPickup);
+router.post("/pickup/accept", actionLimiter, driverController.acceptPickup);
 
 /**
  * POST /api/driver/pickup/complete
  * Driver menyelesaikan pickup (tiba di outlet)
  * Body: { orderId: string }
  */
-router.post("/pickup/complete", driverController.completePickup);
+router.post("/pickup/complete", actionLimiter, driverController.completePickup);
 
 /**
  * POST /api/driver/delivery/accept
  * Driver menerima order delivery
  * Body: { orderId: string }
  */
-router.post("/delivery/accept", driverController.acceptDelivery);
+router.post("/delivery/accept", actionLimiter, driverController.acceptDelivery);
 
 /**
  * POST /api/driver/delivery/complete
  * Driver menyelesaikan delivery (barang diterima customer)
  * Body: { orderId: string }
  */
-router.post("/delivery/complete", driverController.completeDelivery);
+router.post("/delivery/complete", actionLimiter, driverController.completeDelivery);
 
 export default router;

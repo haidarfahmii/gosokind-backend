@@ -47,6 +47,10 @@ export const attendanceController = {
           message: "No outlet assigned to this employee account.",
         },
         EMPLOYEE_NOT_FOUND: { status: 404, message: "Employee not found." },
+        MAX_ATTENDANCE_REACHED: { 
+          status: 400, 
+          message: "You have reached the maximum allowed limit of 2 attendance shifts per day." 
+        },
       };
       const mapped = errorMap[error.message];
       if (mapped) {
@@ -121,6 +125,37 @@ export const attendanceController = {
         limit,
         date,
       );
+      res.json({ success: true, ...result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = res.locals.payload as JWTPayload;
+      const { userId, role } = payload;
+      const queryId = req.query.employeeId as string;
+      const date = req.query.date as string | undefined;
+
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      let targetId = userId;
+      if (
+        role === EmployeeRole.SUPER_ADMIN ||
+        role === EmployeeRole.OUTLET_ADMIN
+      ) {
+        targetId = queryId || userId;
+      }
+
+      const result = await attendanceService.getEmployeeHistory(
+        targetId,
+        page,
+        limit,
+        date
+      );
+
       res.json({ success: true, ...result });
     } catch (error) {
       next(error);

@@ -13,6 +13,19 @@ export const clockIn = async (userId: string, lat: number, long: number) => {
   validateLocation(lat, long, employee.outlet);
   await ensureNoActiveShift(userId);
 
+  // MAX ATTENDANCE LOGIC: Limit to 2 shifts per day
+  const { start, end } = getDayRange(new Date());
+  const todayShiftsCount = await prisma.attendance.count({
+    where: {
+      employeeId: userId,
+      date: { gte: start, lte: end },
+    },
+  });
+
+  if (todayShiftsCount >= 2) {
+    throw new Error("MAX_ATTENDANCE_REACHED");
+  }
+
   return await prisma.attendance.create({
     data: {
       employeeId: userId,
@@ -89,6 +102,34 @@ export const getAllAttendance = async (
   return {
     data,
     meta: { page, limit, total, lastPage: Math.ceil(total / limit) },
+  };
+};
+
+export const getEmployeeHistory = async (
+  employeeId: string,
+  page: number,
+  limit: number,
+  date?: string
+) => {
+  const whereClause: any = { employeeId };
+  if (date) {
+    const { start, end } = getDayRange(new Date(date));
+    whereClause.date = { gte: start, lte: end };
+  }
+
+  const [data, total] = await prisma.$transaction([
+    prisma.attendance.findMany({
+      where: whereClause,
+      orderBy: { clockIn: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.attendance.count({ where: whereClause }),
+  ]);
+
+  return {
+    data,
+    meta: { page, limit, total, lastPage: Math.ceil(total / limit) || 1 },
   };
 };
 

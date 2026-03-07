@@ -5,6 +5,7 @@ import { verifyRole } from "../middlewares/verify.role.middleware";
 import { verifyOutletScope } from "../middlewares/verify.outlet.scope.middleware";
 import { JWT_SECRET } from "../config/index.config";
 import { EmployeeRole } from "@prisma/client";
+import { actionLimiter } from "../middlewares/rate.limiter.middleware";
 
 const router = Router();
 
@@ -15,13 +16,13 @@ router.use(verifyToken(JWT_SECRET!));
  * POST /api/attendance/clock-in
  * Employee clock in (validasi geolokasi ke outlet)
  */
-router.post("/clock-in", attendanceController.clockIn);
+router.post("/clock-in", actionLimiter, attendanceController.clockIn);
 
 /**
  * POST /api/attendance/clock-out
  * Employee clock out
  */
-router.post("/clock-out", attendanceController.clockOut);
+router.post("/clock-out", actionLimiter, attendanceController.clockOut);
 
 /**
  * GET /api/attendance/dashboard
@@ -30,6 +31,15 @@ router.post("/clock-out", attendanceController.clockOut);
  * - Admin/Super Admin: bisa query ?employeeId=xxx
  */
 router.get("/dashboard", attendanceController.getDashboard);
+
+/**
+ * GET /api/attendance/history
+ * Lihat seluruh riwayat absensi diri sendiri (History Tab)
+ * - Employee: hanya riwayat sendiri
+ * - Admin/Super Admin: bisa query ?employeeId=xxx
+ * Query: ?page=1&limit=10&date=2025-01-01
+ */
+router.get("/history", attendanceController.getHistory);
 
 /**
  * GET /api/attendance
