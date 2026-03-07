@@ -13,6 +13,19 @@ export const clockIn = async (userId: string, lat: number, long: number) => {
   validateLocation(lat, long, employee.outlet);
   await ensureNoActiveShift(userId);
 
+  // MAX ATTENDANCE LOGIC: Limit to 2 shifts per day
+  const { start, end } = getDayRange(new Date());
+  const todayShiftsCount = await prisma.attendance.count({
+    where: {
+      employeeId: userId,
+      date: { gte: start, lte: end },
+    },
+  });
+
+  if (todayShiftsCount >= 2) {
+    throw new Error("MAX_ATTENDANCE_REACHED");
+  }
+
   return await prisma.attendance.create({
     data: {
       employeeId: userId,

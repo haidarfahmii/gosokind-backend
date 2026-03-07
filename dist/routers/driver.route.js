@@ -6,6 +6,7 @@ const verify_token_middleware_1 = require("../middlewares/verify.token.middlewar
 const verify_role_middleware_1 = require("../middlewares/verify.role.middleware");
 const index_config_1 = require("../config/index.config");
 const client_1 = require("@prisma/client");
+const rate_limiter_middleware_1 = require("../middlewares/rate.limiter.middleware");
 const router = (0, express_1.Router)();
 // Semua route driver HARUS terproteksi dan hanya untuk role DRIVER
 router.use((0, verify_token_middleware_1.verifyToken)(index_config_1.JWT_SECRET));
@@ -35,23 +36,23 @@ router.get("/availability", driver_controller_1.driverController.checkAvailabili
  * Driver menerima order pickup
  * Body: { orderId: string }
  */
-router.post("/pickup/accept", driver_controller_1.driverController.acceptPickup);
+router.post("/pickup/accept", rate_limiter_middleware_1.actionLimiter, driver_controller_1.driverController.acceptPickup);
 /**
  * POST /api/driver/pickup/complete
  * Driver menyelesaikan pickup (tiba di outlet)
  * Body: { orderId: string }
  */
-router.post("/pickup/complete", driver_controller_1.driverController.completePickup);
+router.post("/pickup/complete", rate_limiter_middleware_1.actionLimiter, driver_controller_1.driverController.completePickup);
 /**
  * POST /api/driver/delivery/accept
  * Driver menerima order delivery
  * Body: { orderId: string }
  */
-router.post("/delivery/accept", driver_controller_1.driverController.acceptDelivery);
+router.post("/delivery/accept", rate_limiter_middleware_1.actionLimiter, driver_controller_1.driverController.acceptDelivery);
 /**
  * POST /api/driver/delivery/complete
  * Driver menyelesaikan delivery (barang diterima customer)
  * Body: { orderId: string }
  */
-router.post("/delivery/complete", driver_controller_1.driverController.completeDelivery);
+router.post("/delivery/complete", rate_limiter_middleware_1.actionLimiter, driver_controller_1.driverController.completeDelivery);
 exports.default = router;

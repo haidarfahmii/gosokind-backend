@@ -4,6 +4,7 @@ import { verifyToken } from "../middlewares/verify.token.middleware";
 import { verifyRole } from "../middlewares/verify.role.middleware";
 import { JWT_SECRET } from "../config/index.config";
 import { EmployeeRole } from "@prisma/client";
+import { actionLimiter } from "../middlewares/rate.limiter.middleware";
 
 const router = Router();
 
@@ -42,6 +43,6 @@ router.get("/history", workerController.getJobHistory);
  * Body: { orderId, station, items: [{ laundryItemId, quantity }] }
  * Jika qty tidak match → harus buat bypass request terlebih dahulu
  */
-router.post("/process", workerController.processOrder);
+router.post("/process", actionLimiter, workerController.processOrder);
 
 export default router;

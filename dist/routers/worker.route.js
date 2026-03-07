@@ -6,6 +6,7 @@ const verify_token_middleware_1 = require("../middlewares/verify.token.middlewar
 const verify_role_middleware_1 = require("../middlewares/verify.role.middleware");
 const index_config_1 = require("../config/index.config");
 const client_1 = require("@prisma/client");
+const rate_limiter_middleware_1 = require("../middlewares/rate.limiter.middleware");
 const router = (0, express_1.Router)();
 // Semua route worker HARUS terproteksi
 router.use((0, verify_token_middleware_1.verifyToken)(index_config_1.JWT_SECRET));
@@ -37,5 +38,5 @@ router.get("/history", worker_controller_1.workerController.getJobHistory);
  * Body: { orderId, station, items: [{ laundryItemId, quantity }] }
  * Jika qty tidak match → harus buat bypass request terlebih dahulu
  */
-router.post("/process", worker_controller_1.workerController.processOrder);
+router.post("/process", rate_limiter_middleware_1.actionLimiter, worker_controller_1.workerController.processOrder);
 exports.default = router;

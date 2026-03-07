@@ -7,6 +7,7 @@ const verify_role_middleware_1 = require("../middlewares/verify.role.middleware"
 const verify_outlet_scope_middleware_1 = require("../middlewares/verify.outlet.scope.middleware");
 const index_config_1 = require("../config/index.config");
 const client_1 = require("@prisma/client");
+const rate_limiter_middleware_1 = require("../middlewares/rate.limiter.middleware");
 const router = (0, express_1.Router)();
 // Semua route attendance memerlukan JWT
 router.use((0, verify_token_middleware_1.verifyToken)(index_config_1.JWT_SECRET));
@@ -14,12 +15,12 @@ router.use((0, verify_token_middleware_1.verifyToken)(index_config_1.JWT_SECRET)
  * POST /api/attendance/clock-in
  * Employee clock in (validasi geolokasi ke outlet)
  */
-router.post("/clock-in", attendance_controller_1.attendanceController.clockIn);
+router.post("/clock-in", rate_limiter_middleware_1.actionLimiter, attendance_controller_1.attendanceController.clockIn);
 /**
  * POST /api/attendance/clock-out
  * Employee clock out
  */
-router.post("/clock-out", attendance_controller_1.attendanceController.clockOut);
+router.post("/clock-out", rate_limiter_middleware_1.actionLimiter, attendance_controller_1.attendanceController.clockOut);
 /**
  * GET /api/attendance/dashboard
  * Lihat dashboard absensi hari ini + total hari kerja
