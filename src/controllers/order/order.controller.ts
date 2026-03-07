@@ -45,10 +45,13 @@ export const orderController = {
       // Ambil ID customer dari token (diset oleh middleware verifyToken)
       const customerId = res.locals.payload.userId;
 
-      const query: GetAllOrdersQuery = {
+      const query: any = {
         page: req.query.page ? parseInt(req.query.page as string) : undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
         status: req.query.status as any,
+        search: req.query.search as string | undefined,
+        sortBy: req.query.sortBy as string | undefined,
+        sortOrder: req.query.sortOrder as string | undefined,
       };
 
       const result = await orderService.getOrdersByCustomer(customerId, query);
