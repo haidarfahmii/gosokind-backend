@@ -177,7 +177,7 @@ export const orderQueryService = {
 
   async getOrdersByCustomer(
     customerId: string,
-    query: GetAllOrdersQuery
+    query: GetAllOrdersQuery & { sortBy?: string; sortOrder?: string } // Tambahan type untuk sort
   ): Promise<OrderListResponse> {
     const page = query.page || 1;
     const limit = query.limit || 5;
@@ -195,6 +195,21 @@ export const orderQueryService = {
       where.status = {
         not: "COMPLETED"
       };
+    }
+
+    // PERBAIKAN 1: Tambahkan logika pencarian (Search)
+    if (query.search) {
+      where.OR = [
+        { orderNumber: { contains: query.search, mode: "insensitive" } }
+      ];
+    }
+
+    // PERBAIKAN 2: Tambahkan logika pengurutan (Sort) dinamis
+    const orderBy: any = {};
+    if (query.sortBy && query.sortOrder) {
+      orderBy[query.sortBy] = query.sortOrder; // Contoh: { createdAt: "asc" }
+    } else {
+      orderBy.createdAt = "desc"; // Default jika tidak ada query sort
     }
 
     // Get total count
@@ -277,9 +292,7 @@ export const orderQueryService = {
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: orderBy, // PERBAIKAN 3: Gunakan variabel orderBy yang sudah kita buat
     });
 
     // Format response sesuai tipe data
