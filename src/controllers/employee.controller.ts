@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { employeeService } from "../services/employee.service";
+import { employeeService } from "../services/employee";
 import {
   CreateEmployeeInput,
   UpdateEmployeeInput,
@@ -164,7 +164,7 @@ export const employeeController = {
     const { id } = req.params;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    
+
     const scopedOutletId = res.locals.scopedOutletId;
     const isSuperAdmin = res.locals.isSuperAdmin;
 
@@ -173,7 +173,7 @@ export const employeeController = {
       page,
       limit,
       scopedOutletId,
-      isSuperAdmin
+      isSuperAdmin,
     );
 
     res.status(200).json({
