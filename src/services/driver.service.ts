@@ -114,15 +114,13 @@ export const getDriverHistory = async (
         job.deliveryDriverId === driverId
       ) {
         jobType = "PICKUP & DELIVERY";
-      } else if (job.pickupDriverId === driverId) {
-        jobType = "PICKUP";
       } else if (job.deliveryDriverId === driverId) {
         jobType = "DELIVERY";
       }
 
       return {
         ...job,
-        type: job.pickupDriverId === driverId ? "PICKUP" : "DELIVERY",
+        type: jobType,
       };
     }),
     meta: { page, limit, total, lastPage: Math.ceil(total / limit) },
