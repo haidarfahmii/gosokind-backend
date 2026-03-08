@@ -15,9 +15,12 @@ export const getDriverActiveJob = async (driverId: string) => {
   const job = await getActiveJob(driverId);
   if (!job) return null;
 
+  const jobType =
+    job.status === OrderStatus.DELIVERY_ON_THE_WAY ? "DELIVERY" : "PICKUP";
+
   return {
     ...job,
-    type: job.pickupDriverId === driverId ? "PICKUP" : "DELIVERY",
+    type: jobType,
   };
 };
 
@@ -51,11 +54,18 @@ export const getDriverHistory = async (
         OR: [
           {
             pickupDriverId: driverId,
-            status: { notIn: [OrderStatus.WAITING_FOR_PICKUP, OrderStatus.PICKUP_ON_THE_WAY] },
+            status: {
+              notIn: [
+                OrderStatus.WAITING_FOR_PICKUP,
+                OrderStatus.PICKUP_ON_THE_WAY,
+              ],
+            },
           },
           {
             deliveryDriverId: driverId,
-            status: { in: [OrderStatus.RECEIVED_BY_CUSTOMER, OrderStatus.COMPLETED] },
+            status: {
+              in: [OrderStatus.RECEIVED_BY_CUSTOMER, OrderStatus.COMPLETED],
+            },
           },
         ],
         deletedAt: null,
@@ -75,11 +85,18 @@ export const getDriverHistory = async (
         OR: [
           {
             pickupDriverId: driverId,
-            status: { notIn: [OrderStatus.WAITING_FOR_PICKUP, OrderStatus.PICKUP_ON_THE_WAY] },
+            status: {
+              notIn: [
+                OrderStatus.WAITING_FOR_PICKUP,
+                OrderStatus.PICKUP_ON_THE_WAY,
+              ],
+            },
           },
           {
             deliveryDriverId: driverId,
-            status: { in: [OrderStatus.RECEIVED_BY_CUSTOMER, OrderStatus.COMPLETED] },
+            status: {
+              in: [OrderStatus.RECEIVED_BY_CUSTOMER, OrderStatus.COMPLETED],
+            },
           },
         ],
         deletedAt: null,
@@ -89,10 +106,25 @@ export const getDriverHistory = async (
   ]);
 
   return {
-    data: data.map(job => ({
-      ...job,
-      type: job.pickupDriverId === driverId ? "PICKUP" : "DELIVERY",
-    })),
+    data: data.map((job) => {
+      let jobType = "PICKUP";
+
+      if (
+        job.pickupDriverId === driverId &&
+        job.deliveryDriverId === driverId
+      ) {
+        jobType = "PICKUP & DELIVERY";
+      } else if (job.pickupDriverId === driverId) {
+        jobType = "PICKUP";
+      } else if (job.deliveryDriverId === driverId) {
+        jobType = "DELIVERY";
+      }
+
+      return {
+        ...job,
+        type: job.pickupDriverId === driverId ? "PICKUP" : "DELIVERY",
+      };
+    }),
     meta: { page, limit, total, lastPage: Math.ceil(total / limit) },
   };
 };
@@ -101,7 +133,7 @@ export const getAvailableJobs = async (
   page: number = 1,
   limit: number = 10,
   sortBy: "asc" | "desc" = "asc",
-  timeFilter: "all" | "today" | "3_days" | "7_days" = "all"
+  timeFilter: "all" | "today" | "3_days" | "7_days" = "all",
 ) => {
   let dateFilter = {};
   const today = new Date();
@@ -119,56 +151,57 @@ export const getAvailableJobs = async (
     dateFilter = { gte: sevenDaysAgo };
   }
 
-  const [pickups, deliveries, totalPickups, totalDeliveries] = await prisma.$transaction([
-    prisma.order.findMany({
-      where: {
-        status: OrderStatus.WAITING_FOR_PICKUP,
-        pickupDriverId: null,
-        deletedAt: null,
-        ...(timeFilter !== "all" ? { createdAt: dateFilter } : {}),
-      },
-      include: {
-        customer: { select: { fullName: true } },
-        address: true,
-        orderItems: { include: { laundryItem: true } },
-      },
-      orderBy: { createdAt: sortBy },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.order.findMany({
-      where: {
-        status: OrderStatus.READY_FOR_DELIVERY,
-        deliveryDriverId: null,
-        deletedAt: null,
-        ...(timeFilter !== "all" ? { updatedAt: dateFilter } : {}),
-      },
-      include: {
-        customer: { select: { fullName: true } },
-        address: true,
-        orderItems: { include: { laundryItem: true } },
-      },
-      orderBy: { updatedAt: sortBy },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.order.count({
-      where: {
-        status: OrderStatus.WAITING_FOR_PICKUP,
-        pickupDriverId: null,
-        deletedAt: null,
-        ...(timeFilter !== "all" ? { createdAt: dateFilter } : {}),
-      },
-    }),
-    prisma.order.count({
-      where: {
-        status: OrderStatus.READY_FOR_DELIVERY,
-        deliveryDriverId: null,
-        deletedAt: null,
-        ...(timeFilter !== "all" ? { updatedAt: dateFilter } : {}),
-      },
-    }),
-  ]);
+  const [pickups, deliveries, totalPickups, totalDeliveries] =
+    await prisma.$transaction([
+      prisma.order.findMany({
+        where: {
+          status: OrderStatus.WAITING_FOR_PICKUP,
+          pickupDriverId: null,
+          deletedAt: null,
+          ...(timeFilter !== "all" ? { createdAt: dateFilter } : {}),
+        },
+        include: {
+          customer: { select: { fullName: true } },
+          address: true,
+          orderItems: { include: { laundryItem: true } },
+        },
+        orderBy: { createdAt: sortBy },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.order.findMany({
+        where: {
+          status: OrderStatus.READY_FOR_DELIVERY,
+          deliveryDriverId: null,
+          deletedAt: null,
+          ...(timeFilter !== "all" ? { updatedAt: dateFilter } : {}),
+        },
+        include: {
+          customer: { select: { fullName: true } },
+          address: true,
+          orderItems: { include: { laundryItem: true } },
+        },
+        orderBy: { updatedAt: sortBy },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.order.count({
+        where: {
+          status: OrderStatus.WAITING_FOR_PICKUP,
+          pickupDriverId: null,
+          deletedAt: null,
+          ...(timeFilter !== "all" ? { createdAt: dateFilter } : {}),
+        },
+      }),
+      prisma.order.count({
+        where: {
+          status: OrderStatus.READY_FOR_DELIVERY,
+          deliveryDriverId: null,
+          deletedAt: null,
+          ...(timeFilter !== "all" ? { updatedAt: dateFilter } : {}),
+        },
+      }),
+    ]);
 
   const allJobs = [
     ...pickups.map((p) => ({
@@ -184,11 +217,15 @@ export const getAvailableJobs = async (
       customerAddress: d.address.address,
     })),
   ];
-  
+
   // Re-sort the combined array manually to ensure "sortBy" correctly mixes pickup vs delivery times globally
   allJobs.sort((a, b) => {
-    const timeA = new Date(a.type === "PICKUP" ? a.createdAt : a.updatedAt).getTime();
-    const timeB = new Date(b.type === "PICKUP" ? b.createdAt : b.updatedAt).getTime();
+    const timeA = new Date(
+      a.type === "PICKUP" ? a.createdAt : a.updatedAt,
+    ).getTime();
+    const timeB = new Date(
+      b.type === "PICKUP" ? b.createdAt : b.updatedAt,
+    ).getTime();
     return sortBy === "asc" ? timeA - timeB : timeB - timeA;
   });
 
