@@ -127,11 +127,6 @@ export const orderCreationService = {
       throw AppError("Order details have already been input", 400);
     }
 
-    // Validate total weight
-    if (input.totalWeight <= 0) {
-      throw AppError("Total weight must be greater than 0", 400);
-    }
-
     // validasi semua item laundry ada
     const laundryItemIds = input.items.map((item) => item.laundryItemId);
     const laundryItems = await prisma.laundryItem.findMany({
@@ -141,65 +136,98 @@ export const orderCreationService = {
       },
     });
 
-    // Validasi quantity: WEIGHT item min 0.1 kg, ITEM min 1
-    for (const item of input.items) {
-      const laundryItem = laundryItems.find(
-        (li) => li.id === item.laundryItemId,
+    if (laundryItems.length !== laundryItemIds.length) {
+      throw AppError("One or more laundry items not found", 404);
+    }
+
+    // Pisahkan item berdasarkan pricingType
+    const laundryItemMap = new Map(laundryItems.map((li) => [li.id, li]));
+
+    const weightOrderItems = input.items.filter(
+      (item) =>
+        laundryItemMap.get(item.laundryItemId)?.pricingType === "WEIGHT",
+    );
+
+    const satuanOrderItems = input.items.filter(
+      (item) => laundryItemMap.get(item.laundryItemId)?.pricingType === "ITEM",
+    );
+
+    // Validasi: minimal satu jenis item
+    if (weightOrderItems.length === 0 && satuanOrderItems.length === 0) {
+      throw AppError(
+        "At least one item (kiloan or satuan) must be provided",
+        400,
       );
-      if (!laundryItem) continue;
+    }
 
-      if (item.quantity <= 0) {
-        throw AppError(
-          `Quantity for item "${laundryItem.name}" must be greater than 0`,
-          400,
-        );
-      }
+    // Validasi: totalWeight wajib jika ada item kiloan
+    const totalWeight = input.totalWeight ?? 0;
+    if (weightOrderItems.length > 0 && totalWeight <= 0) {
+      throw AppError(
+        "Total weight (kg) is required when there are kiloan items",
+        400,
+      );
+    }
 
-      if (laundryItem.pricingType === "ITEM" && item.quantity < 1) {
+    // Validasi quantity: semua item minimal 1 pcs
+    for (const item of input.items) {
+      if (item.quantity < 1) {
+        const li = laundryItemMap.get(item.laundryItemId);
         throw AppError(
-          `Satuan item "${laundryItem.name}" minimum quantity is 1`,
-          400,
-        );
-      }
-
-      if (laundryItem.pricingType === "WEIGHT" && item.quantity < 0.1) {
-        throw AppError(
-          `Kiloan item "${laundryItem.name}" minimum quantity is 0.1 kg`,
+          `Quantity for item "${li?.name}" must be at least 1`,
           400,
         );
       }
     }
 
-    // Kalkulasi total harga (logika sama: basePrice * quantity)
-    // WEIGHT: 7000/kg * 3.2kg = 22400
-    // ITEM:   15000/pcs * 2pcs = 30000
-    let totalPrice = 0;
-    for (const item of input.items) {
-      const laundryItem = laundryItems.find(
-        (li) => li.id === item.laundryItemId,
+    // Hitung Total Harga
+    //
+    // Kiloan:
+    //   Harga = totalWeight × ratePerKg
+    //   ratePerKg diambil dari basePrice item WEIGHT pertama yang ditemukan.
+    //   ASUMSI: Semua item kiloan menggunakan tarif yang sama (admin harus set
+    //   basePrice yang sama pada semua LaundryItem bertipe WEIGHT).
+    //
+    // Satuan:
+    //   Harga = sum(quantity × basePrice) per item
+    //
+    let kiloanSubtotal = 0;
+    if (weightOrderItems.length > 0) {
+      const firstWeightItem = laundryItemMap.get(
+        weightOrderItems[0].laundryItemId,
       );
-      if (laundryItem?.basePrice) {
-        totalPrice += laundryItem.basePrice * item.quantity;
+      const ratePerKg = firstWeightItem?.basePrice ?? 0;
+      kiloanSubtotal = totalWeight * ratePerKg;
+    }
+
+    let satuanSubtotal = 0;
+    for (const item of satuanOrderItems) {
+      const li = laundryItemMap.get(item.laundryItemId);
+      if (li?.basePrice) {
+        satuanSubtotal += li.basePrice * item.quantity;
       }
     }
 
-    // Hitung totalWeight dari item WEIGHT saja (opsional, bisa override dengan input.totalWeight)
-    // Kita tetap gunakan input.totalWeight dari admin sebagai acuan
+    const calculatedTotalPrice = kiloanSubtotal + satuanSubtotal;
+
+    // Simpan ke Database (transaction)
     const updatedOrder = await prisma.$transaction(async (tx) => {
       const updated = await tx.order.update({
         where: { id: orderId },
         data: {
-          totalWeight: input.totalWeight,
-          totalPrice,
+          // Simpan totalWeight hanya jika ada item kiloan
+          totalWeight: weightOrderItems.length > 0 ? totalWeight : null,
+          totalPrice: calculatedTotalPrice,
           status: OrderStatus.WASHING,
         },
       });
 
+      // Simpan semua items — WEIGHT items: quantity = pcs (untuk worker tracking)
       await tx.orderItem.createMany({
         data: input.items.map((item) => ({
           orderId,
           laundryItemId: item.laundryItemId,
-          quantity: item.quantity, // Float
+          quantity: item.quantity, // pcs untuk semua tipe
         })),
       });
 
