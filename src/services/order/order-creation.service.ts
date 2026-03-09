@@ -141,34 +141,51 @@ export const orderCreationService = {
       },
     });
 
-    if (laundryItems.length !== laundryItemIds.length) {
-      throw AppError("One or more laundry items not found", 404);
-    }
-
-    // Validate quantities
+    // Validasi quantity: WEIGHT item min 0.1 kg, ITEM min 1
     for (const item of input.items) {
+      const laundryItem = laundryItems.find(
+        (li) => li.id === item.laundryItemId,
+      );
+      if (!laundryItem) continue;
+
       if (item.quantity <= 0) {
         throw AppError(
-          `Quantity for item ${item.laundryItemId} must be greater than 0`,
+          `Quantity for item "${laundryItem.name}" must be greater than 0`,
+          400,
+        );
+      }
+
+      if (laundryItem.pricingType === "ITEM" && item.quantity < 1) {
+        throw AppError(
+          `Satuan item "${laundryItem.name}" minimum quantity is 1`,
+          400,
+        );
+      }
+
+      if (laundryItem.pricingType === "WEIGHT" && item.quantity < 0.1) {
+        throw AppError(
+          `Kiloan item "${laundryItem.name}" minimum quantity is 0.1 kg`,
           400,
         );
       }
     }
 
-    // total kalkulasi harga dari item
+    // Kalkulasi total harga (logika sama: basePrice * quantity)
+    // WEIGHT: 7000/kg * 3.2kg = 22400
+    // ITEM:   15000/pcs * 2pcs = 30000
     let totalPrice = 0;
     for (const item of input.items) {
       const laundryItem = laundryItems.find(
         (li) => li.id === item.laundryItemId,
       );
-      if (laundryItem && laundryItem.basePrice) {
+      if (laundryItem?.basePrice) {
         totalPrice += laundryItem.basePrice * item.quantity;
       }
     }
 
-    // update order dengan transaksi
+    // Hitung totalWeight dari item WEIGHT saja (opsional, bisa override dengan input.totalWeight)
+    // Kita tetap gunakan input.totalWeight dari admin sebagai acuan
     const updatedOrder = await prisma.$transaction(async (tx) => {
-      // Update order with weight, price, and status
       const updated = await tx.order.update({
         where: { id: orderId },
         data: {
@@ -178,12 +195,11 @@ export const orderCreationService = {
         },
       });
 
-      // Create order items
       await tx.orderItem.createMany({
         data: input.items.map((item) => ({
           orderId,
           laundryItemId: item.laundryItemId,
-          quantity: item.quantity,
+          quantity: item.quantity, // Float
         })),
       });
 

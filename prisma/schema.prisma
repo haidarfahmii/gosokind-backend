@@ -66,6 +66,11 @@ enum BypassStatus {
   REJECTED
 }
 
+enum PricingType {
+  WEIGHT  // Kiloan — harga dihitung per kg
+  ITEM    // Satuan — harga dihitung per pcs/set
+}
+
 model Customer {
   id         String  @id @default(cuid())
   email      String  @unique
@@ -171,6 +176,7 @@ model LaundryItem {
   category  String? // e.g., "Atasan", "Bawahan", "Linen", etc.
   unit      String? // e.g., "Pcs", "Kg", "Set"
   basePrice Float? // Base price per unit
+  pricingType PricingType @default(ITEM)
 
   // Relations
   orderItems    OrderItem[]
@@ -236,7 +242,7 @@ model OrderItem {
   laundryItemId String
   laundryItem   LaundryItem @relation(fields: [laundryItemId], references: [id])
 
-  quantity Int // Jumlah item resmi
+  quantity Float // Jumlah item resmi
 
   @@map("order_items")
 }

@@ -115,6 +115,7 @@ export interface OrderResponse {
       id: string;
       name: string;
       category: string | null;
+      pricingType: string;
     };
     quantity: number;
   }>;

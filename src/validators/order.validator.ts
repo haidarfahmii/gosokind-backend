@@ -233,9 +233,9 @@ export const inputOrderDetailsValidator = [
   body("items.*.quantity")
     .notEmpty()
     .withMessage("Quantity is required for each item")
-    .isInt({ min: 1 })
+    .isFloat({ min: 0.1 })
     .withMessage("Quantity must be at least 1")
-    .toInt(),
+    .toFloat(),
 ];
 
 // PATCH /api/customer/orders/:id/driver-status

@@ -10,6 +10,12 @@ export const createLaundryItemValidator = [
     .withMessage("Item name must be between 2 and 100 characters")
     .trim(),
 
+  body("pricingType")
+    .notEmpty()
+    .withMessage("Pricing type is required")
+    .isIn(["WEIGHT", "ITEM"])
+    .withMessage("Pricing type must be either WEIGHT or ITEM"),
+
   body("category")
     .optional()
     .isString()
@@ -54,6 +60,11 @@ export const createLaundryItemValidator = [
 
 export const updateLaundryItemValidator = [
   param("id").notEmpty().withMessage("Laundry item ID is required"),
+
+  body("pricingType")
+    .optional()
+    .isIn(["WEIGHT", "ITEM"])
+    .withMessage("Pricing type must be either WEIGHT or ITEM"),
 
   body("name")
     .optional()
@@ -142,6 +153,11 @@ export const getAllLaundryItemsValidator = [
     .isString()
     .withMessage("Category must be a string")
     .trim(),
+
+  query("pricingType")
+    .optional()
+    .isIn(["WEIGHT", "ITEM"])
+    .withMessage("pricingType must be WEIGHT or ITEM"),
 
   query("sortBy")
     .optional()

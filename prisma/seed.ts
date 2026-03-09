@@ -18,7 +18,13 @@
  * - 5 Orders
  */
 
-import { PrismaClient, EmployeeRole, OutletStatus, OrderStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  EmployeeRole,
+  OutletStatus,
+  OrderStatus,
+  PricingType,
+} from "@prisma/client";
 import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
@@ -61,7 +67,7 @@ async function main() {
     update: {},
     create: {
       id: "seed-outlet-jaksel-001",
-      outletCode: "OUT-JKT-001",
+      outletCode: "OUT-JAKSEL-001",
       name: "Gosokind Outlet - Jakarta Selatan",
       address: "Jl. Kemang Raya No. 45, Kemang, Jakarta Selatan",
       province: "DKI Jakarta",
@@ -99,7 +105,9 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`   ✅ Super Admin: ${superAdmin.email} | pw: ${MOCK_CREDENTIALS.ADMIN_PASSWORD}`);
+  console.log(
+    `   ✅ Super Admin: ${superAdmin.email} | pw: ${MOCK_CREDENTIALS.ADMIN_PASSWORD}`,
+  );
 
   // 3b. Outlet Admin
   const outletAdmin = await prisma.employee.upsert({
@@ -121,7 +129,9 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`   ✅ Outlet Admin: ${outletAdmin.email} | pw: ${MOCK_CREDENTIALS.ADMIN_PASSWORD}`);
+  console.log(
+    `   ✅ Outlet Admin: ${outletAdmin.email} | pw: ${MOCK_CREDENTIALS.ADMIN_PASSWORD}`,
+  );
 
   // 3c. Driver
   const driver = await prisma.employee.upsert({
@@ -143,7 +153,9 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`   ✅ Driver: ${driver.email} | pw: ${MOCK_CREDENTIALS.DRIVER_PASSWORD}`);
+  console.log(
+    `   ✅ Driver: ${driver.email} | pw: ${MOCK_CREDENTIALS.DRIVER_PASSWORD}`,
+  );
 
   // 3d. Worker Cuci (WORKER_WASHING)
   const workerWashing = await prisma.employee.upsert({
@@ -165,7 +177,9 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`   ✅ Worker Cuci: ${workerWashing.email} | pw: ${MOCK_CREDENTIALS.WORKER_PASSWORD}`);
+  console.log(
+    `   ✅ Worker Cuci: ${workerWashing.email} | pw: ${MOCK_CREDENTIALS.WORKER_PASSWORD}`,
+  );
 
   // 3e. Worker Setrika (WORKER_IRONING)
   const workerIroning = await prisma.employee.upsert({
@@ -187,7 +201,9 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`   ✅ Worker Setrika: ${workerIroning.email} | pw: ${MOCK_CREDENTIALS.WORKER_PASSWORD}`);
+  console.log(
+    `   ✅ Worker Setrika: ${workerIroning.email} | pw: ${MOCK_CREDENTIALS.WORKER_PASSWORD}`,
+  );
 
   // 3f. Worker Packing (WORKER_PACKING)
   const workerPacking = await prisma.employee.upsert({
@@ -209,7 +225,9 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`   ✅ Worker Packing: ${workerPacking.email} | pw: ${MOCK_CREDENTIALS.WORKER_PASSWORD}`);
+  console.log(
+    `   ✅ Worker Packing: ${workerPacking.email} | pw: ${MOCK_CREDENTIALS.WORKER_PASSWORD}`,
+  );
 
   // =============================================
   // STEP 4: Buat Customer (Verified)
@@ -261,8 +279,12 @@ async function main() {
     });
   }
 
-  console.log(`   ✅ Customer: ${customer.email} | pw: ${MOCK_CREDENTIALS.CUSTOMER_PASSWORD}`);
-  console.log(`   ✅ Address Primary: ${primaryAddress.label} (ID: ${primaryAddress.id})`);
+  console.log(
+    `   ✅ Customer: ${customer.email} | pw: ${MOCK_CREDENTIALS.CUSTOMER_PASSWORD}`,
+  );
+  console.log(
+    `   ✅ Address Primary: ${primaryAddress.label} (ID: ${primaryAddress.id})`,
+  );
 
   // =============================================
   // STEP 5: Buat Laundry Items (Master Data)
@@ -270,21 +292,101 @@ async function main() {
   console.log("\n👗 Creating laundry items...");
 
   const laundryItems = [
-    // Atasan
-    { name: "Kaos", category: "Atasan", unit: "Pcs", basePrice: 8000 },
-    { name: "Kemeja", category: "Atasan", unit: "Pcs", basePrice: 10000 },
-    { name: "Polo Shirt", category: "Atasan", unit: "Pcs", basePrice: 10000 },
-    { name: "Jaket", category: "Atasan", unit: "Pcs", basePrice: 15000 },
-    // Bawahan
-    { name: "Celana Jeans", category: "Bawahan", unit: "Pcs", basePrice: 12000 },
-    { name: "Celana Pendek", category: "Bawahan", unit: "Pcs", basePrice: 8000 },
-    // Linen
-    { name: "Handuk", category: "Linen", unit: "Pcs", basePrice: 10000 },
-    { name: "Sprei Single", category: "Linen", unit: "Set", basePrice: 25000 },
-    // Bed Cover
-    { name: "Bed Cover Queen", category: "Bed Cover", unit: "Pcs", basePrice: 35000 },
-    // Lainnya
-    { name: "Mukena", category: "Lainnya", unit: "Set", basePrice: 20000 },
+    // KILOAN (WEIGHT)
+    {
+      name: "Cuci Setrika Kiloan",
+      category: "Kiloan",
+      unit: "Kg",
+      basePrice: 8000,
+      pricingType: PricingType.WEIGHT,
+    },
+    {
+      name: "Cuci Kering Kiloan",
+      category: "Kiloan",
+      unit: "Kg",
+      basePrice: 6000,
+      pricingType: PricingType.WEIGHT,
+    },
+
+    // SATUAN - Atasan (ITEM)
+    {
+      name: "Kaos",
+      category: "Atasan",
+      unit: "Pcs",
+      basePrice: 8000,
+      pricingType: PricingType.ITEM,
+    },
+    {
+      name: "Kemeja",
+      category: "Atasan",
+      unit: "Pcs",
+      basePrice: 10000,
+      pricingType: PricingType.ITEM,
+    },
+    {
+      name: "Polo Shirt",
+      category: "Atasan",
+      unit: "Pcs",
+      basePrice: 10000,
+      pricingType: PricingType.ITEM,
+    },
+    {
+      name: "Jaket",
+      category: "Atasan",
+      unit: "Pcs",
+      basePrice: 15000,
+      pricingType: PricingType.ITEM,
+    },
+
+    // SATUAN - Bawahan (ITEM)
+    {
+      name: "Celana Jeans",
+      category: "Bawahan",
+      unit: "Pcs",
+      basePrice: 12000,
+      pricingType: PricingType.ITEM,
+    },
+    {
+      name: "Celana Pendek",
+      category: "Bawahan",
+      unit: "Pcs",
+      basePrice: 8000,
+      pricingType: PricingType.ITEM,
+    },
+
+    // SATUAN - Linen (ITEM)
+    {
+      name: "Handuk",
+      category: "Linen",
+      unit: "Pcs",
+      basePrice: 10000,
+      pricingType: PricingType.ITEM,
+    },
+    {
+      name: "Sprei Single",
+      category: "Linen",
+      unit: "Set",
+      basePrice: 25000,
+      pricingType: PricingType.ITEM,
+    },
+
+    // SATUAN - Bed Cover (ITEM)
+    {
+      name: "Bed Cover Queen",
+      category: "Bed Cover",
+      unit: "Pcs",
+      basePrice: 35000,
+      pricingType: PricingType.ITEM,
+    },
+
+    // SATUAN - Lainnya (ITEM)
+    {
+      name: "Mukena",
+      category: "Lainnya",
+      unit: "Set",
+      basePrice: 20000,
+      pricingType: PricingType.ITEM,
+    },
   ];
 
   const createdItems = [];
@@ -298,56 +400,131 @@ async function main() {
     });
 
     if (existing) {
-      createdItems.push(existing);
-      console.log(`   ⏭️  Item sudah ada: ${item.name}`);
+      // Jika butuh mengupdate data lama agar memiliki pricingType, kita update di sini
+      if (!existing.pricingType || existing.pricingType !== item.pricingType) {
+        const updated = await prisma.laundryItem.update({
+          where: { id: existing.id },
+          data: { pricingType: item.pricingType },
+        });
+        createdItems.push(updated);
+        console.log(`   🔄 Item diupdate (PricingType): ${updated.name}`);
+      } else {
+        createdItems.push(existing);
+        console.log(`   ⏭️  Item sudah ada: ${item.name}`);
+      }
     } else {
       const created = await prisma.laundryItem.create({ data: item });
       createdItems.push(created);
       console.log(
-        `   ✅ Item: ${created.name} | Harga: Rp ${created.basePrice?.toLocaleString("id-ID")}`,
+        `   ✅ Item: ${created.name} | Tipe: ${created.pricingType} | Harga: Rp ${created.basePrice?.toLocaleString("id-ID")}`,
       );
     }
   }
 
   // =============================================
-  // STEP 6: Buat Orders
+  // STEP 6: Buat Orders (Dengan Variasi Status & Item)
   // =============================================
-  console.log("\n📦 Creating orders...");
+  console.log("\n📦 Creating orders and order items...");
 
   const baseOrderNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-  const orderStatuses = [
-    OrderStatus.WAITING_FOR_PICKUP,
-    OrderStatus.WAITING_FOR_PICKUP,
-    OrderStatus.WAITING_FOR_PICKUP,
-    OrderStatus.WAITING_FOR_PICKUP,
-    OrderStatus.WAITING_FOR_PICKUP,
+
+  // Ambil beberapa item yang sudah dibuat di Step 5 untuk dijadikan mock order
+  const itemKiloan =
+    createdItems.find((i) => i.pricingType === PricingType.WEIGHT) ||
+    createdItems[0];
+  const itemSatuanAtasan =
+    createdItems.find((i) => i.category === "Atasan") || createdItems[2];
+  const itemSatuanLinen =
+    createdItems.find((i) => i.category === "Linen") || createdItems[8];
+
+  // Skenario Order untuk mempermudah Testing Flow
+  const orderScenarios = [
+    {
+      status: OrderStatus.WAITING_FOR_PICKUP,
+      note: "Baru dibuat user, menunggu driver",
+    },
+    {
+      status: OrderStatus.ARRIVED_AT_OUTLET,
+      note: "Sudah di outlet, Admin baru input item",
+    },
+    { status: OrderStatus.WASHING, note: "Sedang dikerjakan oleh Worker Cuci" },
+    {
+      status: OrderStatus.READY_FOR_DELIVERY,
+      note: "Selesai packing, siap diantar balik",
+    },
+    {
+      status: OrderStatus.COMPLETED,
+      note: "Sudah diterima customer (History)",
+    },
   ];
 
   const createdOrders = [];
-  for (let i = 0; i < orderStatuses.length; i++) {
+
+  for (let i = 0; i < orderScenarios.length; i++) {
+    const scenario = orderScenarios[i];
     const orderNumber = `${baseOrderNumber}${(i + 1).toString().padStart(3, "0")}`;
+
     const existingOrder = await prisma.order.findUnique({
       where: { orderNumber },
     });
 
     if (existingOrder) {
       createdOrders.push(existingOrder);
-      console.log(`   ⏭️  Order sudah ada: ${orderNumber}`);
-    } else {
-      const created = await prisma.order.create({
-        data: {
-          orderNumber,
-          customerId: customer.id,
-          outletId: outlet.id,
-          addressId: primaryAddress.id,
-          status: orderStatuses[i],
-        },
-      });
-      createdOrders.push(created);
       console.log(
-        `   ✅ Order: ${created.orderNumber} | Status: ${created.status}`,
+        `   ⏭️  Order sudah ada: ${orderNumber} (${scenario.status})`,
       );
+      continue;
     }
+
+    // Default variable untuk order yang belum diproses admin
+    let totalWeight = null;
+    let totalPrice = null;
+    let orderItemsData: any[] = [];
+
+    // Jika statusnya bukan WAITING_FOR_PICKUP atau PICKUP_ON_THE_WAY,
+    // berarti asumsinya Admin Outlet sudah menginput cucian.
+    if (scenario.status !== OrderStatus.ARRIVED_AT_OUTLET) {
+      // Simulasi keranjang cucian pelanggan: 3 Kg Kiloan + 2 Kemeja + 1 Sprei
+      const qtyKiloan = 3.5; // 3.5 Kg
+      const qtyAtasan = 2; // 2 Pcs
+      const qtyLinen = 1; // 1 Set
+
+      orderItemsData = [
+        { laundryItemId: itemKiloan.id, quantity: qtyKiloan },
+        { laundryItemId: itemSatuanAtasan.id, quantity: qtyAtasan },
+        { laundryItemId: itemSatuanLinen.id, quantity: qtyLinen },
+      ];
+
+      totalWeight = qtyKiloan; // Biasanya totalWeight hanya akumulasi dari yang kiloan
+      totalPrice =
+        qtyKiloan * (itemKiloan.basePrice || 0) +
+        qtyAtasan * (itemSatuanAtasan.basePrice || 0) +
+        qtyLinen * (itemSatuanLinen.basePrice || 0);
+    }
+
+    const created = await prisma.order.create({
+      data: {
+        orderNumber,
+        customerId: customer.id,
+        outletId: outlet.id,
+        addressId: primaryAddress?.id || "",
+        status: scenario.status,
+        totalWeight,
+        totalPrice,
+        pickupDriverId: driver.id, // Set driver penjemput
+        // Relasi untuk insert orderItems jika ada
+        ...(orderItemsData.length > 0 && {
+          orderItems: {
+            create: orderItemsData,
+          },
+        }),
+      },
+    });
+
+    createdOrders.push(created);
+    console.log(
+      `   ✅ Order: ${created.orderNumber} | Status: ${created.status} | Rp ${totalPrice?.toLocaleString("id-ID") || "0"} - (${scenario.note})`,
+    );
   }
 
   // =============================================
@@ -365,33 +542,75 @@ async function main() {
   console.log(`   worker_washing_id  = ${workerWashing.id}`);
   console.log(`   worker_ironing_id  = ${workerIroning.id}`);
   console.log(`   worker_packing_id  = ${workerPacking.id}`);
-  console.log(`   laundry_item_id_1  = ${createdItems[0]?.id} (${createdItems[0]?.name})`);
-  console.log(`   laundry_item_id_2  = ${createdItems[4]?.id} (${createdItems[4]?.name})`);
-  console.log(`   order_id_1         = ${createdOrders[0]?.id} (${createdOrders[0]?.orderNumber})`);
-  console.log(`   order_id_2         = ${createdOrders[1]?.id} (${createdOrders[1]?.orderNumber})`);
-  console.log(`   order_id_3         = ${createdOrders[2]?.id} (${createdOrders[2]?.orderNumber})`);
-  console.log(`   order_id_4         = ${createdOrders[3]?.id} (${createdOrders[3]?.orderNumber})`);
-  console.log(`   order_id_5         = ${createdOrders[4]?.id} (${createdOrders[4]?.orderNumber})`);
+  console.log(
+    `   laundry_item_id_1  = ${createdItems[0]?.id} (${createdItems[0]?.name})`,
+  );
+  console.log(
+    `   laundry_item_id_2  = ${createdItems[4]?.id} (${createdItems[4]?.name})`,
+  );
+  console.log(
+    `   order_id_1         = ${createdOrders[0]?.id} (${createdOrders[0]?.orderNumber})`,
+  );
+  console.log(
+    `   order_id_2         = ${createdOrders[1]?.id} (${createdOrders[1]?.orderNumber})`,
+  );
+  console.log(
+    `   order_id_3         = ${createdOrders[2]?.id} (${createdOrders[2]?.orderNumber})`,
+  );
+  console.log(
+    `   order_id_4         = ${createdOrders[3]?.id} (${createdOrders[3]?.orderNumber})`,
+  );
+  console.log(
+    `   order_id_5         = ${createdOrders[4]?.id} (${createdOrders[4]?.orderNumber})`,
+  );
 
   console.log("\n🔑 MOCK ACCOUNTS:");
-  console.log("┌────────────────────┬─────────────────────────────────┬──────────────┐");
-  console.log("│ Role               │ Email                           │ Password     │");
-  console.log("├────────────────────┼─────────────────────────────────┼──────────────┤");
-  console.log(`│ Super Admin        │ superadmin@gosokind.com         │ Admin@123    │`);
-  console.log(`│ Outlet Admin       │ outletadmin@gosokind.com        │ Admin@123    │`);
-  console.log(`│ Driver             │ driver@gosokind.com             │ Driver@123   │`);
-  console.log(`│ Worker Cuci        │ worker.cuci@gosokind.com        │ Worker@123   │`);
-  console.log(`│ Worker Setrika     │ worker.setrika@gosokind.com     │ Worker@123   │`);
-  console.log(`│ Worker Packing     │ worker.packing@gosokind.com     │ Worker@123   │`);
-  console.log(`│ Customer           │ customer@gosokind.com           │ Customer@123 │`);
-  console.log("└────────────────────┴─────────────────────────────────┴──────────────┘");
+  console.log(
+    "┌────────────────────┬─────────────────────────────────┬──────────────┐",
+  );
+  console.log(
+    "│ Role               │ Email                           │ Password     │",
+  );
+  console.log(
+    "├────────────────────┼─────────────────────────────────┼──────────────┤",
+  );
+  console.log(
+    `│ Super Admin        │ superadmin@gosokind.com         │ Admin@123    │`,
+  );
+  console.log(
+    `│ Outlet Admin       │ outletadmin@gosokind.com        │ Admin@123    │`,
+  );
+  console.log(
+    `│ Driver             │ driver@gosokind.com             │ Driver@123   │`,
+  );
+  console.log(
+    `│ Worker Cuci        │ worker.cuci@gosokind.com        │ Worker@123   │`,
+  );
+  console.log(
+    `│ Worker Setrika     │ worker.setrika@gosokind.com     │ Worker@123   │`,
+  );
+  console.log(
+    `│ Worker Packing     │ worker.packing@gosokind.com     │ Worker@123   │`,
+  );
+  console.log(
+    `│ Customer           │ customer@gosokind.com           │ Customer@123 │`,
+  );
+  console.log(
+    "└────────────────────┴─────────────────────────────────┴──────────────┘",
+  );
 
   console.log("\n🚀 NEXT STEPS:");
-  console.log("   1. Import gosokind-order-management.postman_collection.json ke Postman");
-  console.log("   2. Import gosokind-local.postman_environment.json ke Postman");
+  console.log(
+    "   1. Import gosokind-order-management.postman_collection.json ke Postman",
+  );
+  console.log(
+    "   2. Import gosokind-local.postman_environment.json ke Postman",
+  );
   console.log("   3. Pilih environment 'Gosokind - Local Environment'");
   console.log("   4. Jalankan folder '🔐 Auth' untuk login semua akun");
-  console.log("   5. Jalankan folder '🏪 Setup Data' untuk populate variabel IDs");
+  console.log(
+    "   5. Jalankan folder '🏪 Setup Data' untuk populate variabel IDs",
+  );
   console.log("   6. Mulai test dari folder '🛒 Order Flow - Full Journey'");
   console.log("\n" + "=".repeat(60));
 }

@@ -40,6 +40,7 @@ export const laundryItemService = {
         category: category || null,
         unit: unit || null,
         basePrice: basePrice || null,
+        pricingType: input.pricingType || "ITEM",
       },
     });
 
@@ -49,6 +50,7 @@ export const laundryItemService = {
       category: item.category,
       unit: item.unit,
       basePrice: item.basePrice,
+      pricingType: item.pricingType,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
     };
@@ -60,6 +62,7 @@ export const laundryItemService = {
       limit = 10,
       search,
       category,
+      pricingType,
       sortBy = "name",
       sortOrder = "asc",
     } = query;
@@ -82,6 +85,10 @@ export const laundryItemService = {
         equals: category,
         mode: "insensitive",
       };
+    }
+
+    if (pricingType) {
+      where.pricingType = pricingType;
     }
 
     // Get total count
@@ -112,6 +119,7 @@ export const laundryItemService = {
       category: item.category,
       unit: item.unit,
       basePrice: item.basePrice,
+      pricingType: item.pricingType,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       usageCount: item._count.orderItems,
@@ -174,6 +182,7 @@ export const laundryItemService = {
       category: item.category,
       unit: item.unit,
       basePrice: item.basePrice,
+      pricingType: item.pricingType,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       usageStats: {
@@ -241,6 +250,7 @@ export const laundryItemService = {
       category: updatedItem.category,
       unit: updatedItem.unit,
       basePrice: updatedItem.basePrice,
+      pricingType: updatedItem.pricingType,
       createdAt: updatedItem.createdAt,
       updatedAt: updatedItem.updatedAt,
     };
