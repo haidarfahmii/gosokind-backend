@@ -19,13 +19,15 @@ export const laundryItemController = {
   },
 
   async getAllLaundryItems(req: Request, res: Response) {
-    const { page, limit, search, category, sortBy, sortOrder } = req.query;
+    const { page, limit, search, category, pricingType, sortBy, sortOrder } =
+      req.query;
 
     const query = {
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
       search: search as string,
       category: category as string,
+      pricingType: pricingType as "WEIGHT" | "ITEM" | undefined,
       sortBy: sortBy as
         | "name"
         | "category"
