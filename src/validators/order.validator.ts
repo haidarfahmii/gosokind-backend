@@ -16,6 +16,7 @@ export const getAllOrdersValidator = [
   query("status")
     .optional()
     .isIn([
+      "SCHEDULED_FOR_PICKUP",
       "WAITING_FOR_PICKUP",
       "PICKUP_ON_THE_WAY",
       "ARRIVED_AT_OUTLET",
@@ -110,6 +111,7 @@ export const updateOrderStatusValidator = [
     .notEmpty()
     .withMessage("Status is required")
     .isIn([
+      "SCHEDULED_FOR_PICKUP",
       "WAITING_FOR_PICKUP",
       "PICKUP_ON_THE_WAY",
       "ARRIVED_AT_OUTLET",
