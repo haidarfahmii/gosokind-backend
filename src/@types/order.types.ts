@@ -20,7 +20,7 @@ export interface CreateOrderByCustomerInput {
 
 // input untuk admin mengisi detail order
 export interface InputOrderDetails {
-  totalWeight: number;
+  totalWeight?: number;
   items: OrderItemInput[];
 }
 
@@ -115,6 +115,7 @@ export interface OrderResponse {
       id: string;
       name: string;
       category: string | null;
+      pricingType: string;
     };
     quantity: number;
   }>;

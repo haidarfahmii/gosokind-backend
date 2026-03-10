@@ -1,8 +1,11 @@
+export type PricingType = "WEIGHT" | "ITEM";
+
 export interface CreateLaundryItemInput {
   name: string;
   category?: string;
   unit?: string;
   basePrice?: number;
+  pricingType?: PricingType;
 }
 
 export interface UpdateLaundryItemInput {
@@ -10,6 +13,7 @@ export interface UpdateLaundryItemInput {
   category?: string;
   unit?: string;
   basePrice?: number;
+  pricingType?: PricingType;
 }
 
 export interface LaundryItemResponse {
@@ -18,6 +22,7 @@ export interface LaundryItemResponse {
   category: string | null;
   unit: string | null;
   basePrice: number | null;
+  pricingType: PricingType;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +32,7 @@ export interface LaundryItemListQuery {
   limit?: number;
   search?: string;
   category?: string;
+  pricingType?: PricingType;
   sortBy?: "name" | "category" | "basePrice" | "createdAt";
   sortOrder?: "asc" | "desc";
 }

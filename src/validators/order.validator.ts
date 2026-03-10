@@ -215,10 +215,9 @@ export const inputOrderDetailsValidator = [
     .isString()
     .withMessage("Order ID must be a string"),
   body("totalWeight")
-    .notEmpty()
-    .withMessage("Total weight is required")
-    .isFloat({ min: 0.1 })
-    .withMessage("Total weight must be at least 0.1 kg")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Total weight must be a non-negative number")
     .toFloat(),
   body("items")
     .notEmpty()
@@ -234,7 +233,7 @@ export const inputOrderDetailsValidator = [
     .notEmpty()
     .withMessage("Quantity is required for each item")
     .isInt({ min: 1 })
-    .withMessage("Quantity must be at least 1")
+    .withMessage("Quantity must be at least 1 (pcs)")
     .toInt(),
 ];
 

@@ -112,6 +112,7 @@ export const orderQueryService = {
                 id: true,
                 name: true,
                 category: true,
+                pricingType: true,
               },
             },
           },
@@ -177,7 +178,7 @@ export const orderQueryService = {
 
   async getOrdersByCustomer(
     customerId: string,
-    query: GetAllOrdersQuery & { sortBy?: string; sortOrder?: string } // Tambahan type untuk sort
+    query: GetAllOrdersQuery & { sortBy?: string; sortOrder?: string }, // Tambahan type untuk sort
   ): Promise<OrderListResponse> {
     const page = query.page || 1;
     const limit = query.limit || 5;
@@ -193,14 +194,14 @@ export const orderQueryService = {
       where.status = query.status;
     } else {
       where.status = {
-        not: "COMPLETED"
+        not: "COMPLETED",
       };
     }
 
     // PERBAIKAN 1: Tambahkan logika pencarian (Search)
     if (query.search) {
       where.OR = [
-        { orderNumber: { contains: query.search, mode: "insensitive" } }
+        { orderNumber: { contains: query.search, mode: "insensitive" } },
       ];
     }
 
@@ -264,6 +265,7 @@ export const orderQueryService = {
                 id: true,
                 name: true,
                 category: true,
+                pricingType: true,
               },
             },
           },
@@ -377,6 +379,7 @@ export const orderQueryService = {
                 id: true,
                 name: true,
                 category: true,
+                pricingType: true,
               },
             },
           },
@@ -490,6 +493,7 @@ export const orderQueryService = {
                 id: true,
                 name: true,
                 category: true,
+                pricingType: true,
               },
             },
           },
