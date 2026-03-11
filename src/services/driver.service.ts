@@ -72,7 +72,7 @@ export const getDriverHistory = async (
         ...(timeFilter !== "all" ? { updatedAt: dateFilter } : {}),
       },
       include: {
-        customer: { select: { fullName: true } },
+        customer: { select: { fullName: true, phone: true } },
         address: true,
         orderItems: { include: { laundryItem: true } },
       },
@@ -159,7 +159,7 @@ export const getAvailableJobs = async (
           ...(timeFilter !== "all" ? { createdAt: dateFilter } : {}),
         },
         include: {
-          customer: { select: { fullName: true } },
+          customer: { select: { fullName: true, phone: true } },
           address: true,
           orderItems: { include: { laundryItem: true } },
         },
@@ -175,7 +175,7 @@ export const getAvailableJobs = async (
           ...(timeFilter !== "all" ? { updatedAt: dateFilter } : {}),
         },
         include: {
-          customer: { select: { fullName: true } },
+          customer: { select: { fullName: true, phone: true } },
           address: true,
           orderItems: { include: { laundryItem: true } },
         },
@@ -206,12 +206,14 @@ export const getAvailableJobs = async (
       ...p,
       type: "PICKUP",
       customerName: p.customer.fullName,
+      customerPhone: p.customer.phone,
       customerAddress: p.address.address,
     })),
     ...deliveries.map((d) => ({
       ...d,
       type: "DELIVERY",
       customerName: d.customer.fullName,
+      customerPhone: d.customer.phone,
       customerAddress: d.address.address,
     })),
   ];
@@ -326,7 +328,7 @@ const getActiveJob = async (driverId: string) => {
       deletedAt: null,
     },
     include: {
-      customer: { select: { fullName: true } },
+      customer: { select: { fullName: true, phone: true } },
       address: true,
       orderItems: { include: { laundryItem: true } },
     },
