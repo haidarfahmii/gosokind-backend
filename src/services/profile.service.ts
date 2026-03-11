@@ -15,6 +15,7 @@ export const profileService = {
                 id: true,
                 fullName: true,
                 email: true,
+                phone: true,
                 avatarUrl: true,
                 isVerified: true,
                 provider: true,
@@ -50,6 +51,7 @@ export const profileService = {
             data: {
                 fullName: data.fullName,
                 email: data.email,
+                phone: data.phone,
                 avatarUrl: data.avatarUrl,
                 // Set isVerified ke false jika email berubah
                 isVerified: isEmailChanged ? false : user.isVerified
@@ -58,6 +60,7 @@ export const profileService = {
                 id: true,
                 fullName: true,
                 email: true,
+                phone: true,
                 avatarUrl: true,
                 updatedAt: true,
             },

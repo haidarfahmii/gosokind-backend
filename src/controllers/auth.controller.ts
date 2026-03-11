@@ -18,10 +18,10 @@ export const authController = {
   },
 
   async verify(req: Request, res: Response) {
-    const { fullName, password } = req.body;
+    const { fullName, password, phone } = req.body;
     const { userId } = res?.locals?.payload;
 
-    await authService.verify({ userId, fullName, password });
+    await authService.verify({ userId, fullName, phone,password });
 
     res.status(200).json({
       success: true,
@@ -29,6 +29,7 @@ export const authController = {
       data: {
         fullName,
         password,
+        phone
       },
     });
   },
