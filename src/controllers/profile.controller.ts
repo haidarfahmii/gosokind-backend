@@ -15,9 +15,9 @@ export const profileController = {
     },
 
     async updateProfile(req: Request, res: Response) {
-        const { fullName, email } = req.body;
+        const { fullName, email, phone } = req.body;
         const userId = res.locals.payload.userId;
-        const updatedProfile = await profileService.updateProfile(userId, { fullName, email });
+        const updatedProfile = await profileService.updateProfile(userId, { fullName, email, phone });
 
         res.status(200).json({
             success: true,

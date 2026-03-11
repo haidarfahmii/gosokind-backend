@@ -8,6 +8,7 @@ export interface VerifyInput {
   userId: string;
   fullName: string;
   password: string;
+  phone: string;
 }
 
 export interface LoginInput {
@@ -24,6 +25,7 @@ export interface AuthResponse {
     avatarUrl: string | null;
     role: EmployeeRole | "CUSTOMER";
     outletId?: string | null;
+    phone: string | null;
   };
 }
 
@@ -44,6 +46,7 @@ export interface GoogleLoginInput {
 export interface UpdateProfileInput {
   fullName?: string;
   email?: string;
+  phone?: string;
   avatarUrl?: string;
 }
 

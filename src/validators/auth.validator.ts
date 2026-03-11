@@ -11,7 +11,11 @@ export const verifyValidator = [
         .isString().withMessage("Fullname must be a string"),
     body("password")
         .notEmpty().withMessage("Password is required")
-        .isLength({ min: 6 }).withMessage("Password must be at leat 6 characters")
+        .isLength({ min: 6 }).withMessage("Password must be at leat 6 characters"),
+    body("phone")
+        .notEmpty().withMessage("Phone number is required")
+        .isString().withMessage("Phone number must be a string")
+        .isMobilePhone("id-ID").withMessage("Invalid phone number format")
 ];
 
 export const loginValidator = [

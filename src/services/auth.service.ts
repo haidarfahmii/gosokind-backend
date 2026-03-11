@@ -67,7 +67,7 @@ export const authService = {
   },
 
   async verify(input: VerifyInput): Promise<void> {
-    const { userId, fullName, password } = input;
+    const { userId, fullName, password, phone } = input;
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -76,6 +76,7 @@ export const authService = {
       data: {
         fullName,
         password: hashedPassword,
+        phone,
         isVerified: true,
       },
     });
@@ -121,6 +122,7 @@ export const authService = {
         name: findUser.fullName,
         email: findUser?.email,
         avatarUrl: findUser.avatarUrl,
+        phone: findUser.phone,
         role: "CUSTOMER",
       },
     };
@@ -218,6 +220,7 @@ export const authService = {
         name: user.fullName,
         email: user.email,
         avatarUrl: user.avatarUrl,
+        phone: user.phone,
         role: "CUSTOMER",
       },
     };

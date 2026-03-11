@@ -10,7 +10,13 @@ export const updateProfileValidator = [
     body("email")
         .optional()
         .isEmail()
-        .withMessage("Invalid email format")
+        .withMessage("Invalid email format"),
+
+    body("phone")
+        .optional()
+        .isString()
+        .isMobilePhone("id-ID")
+        .withMessage("Invalid phone number format")
 ];
 
 export const changePasswordValidator = [
