@@ -76,6 +76,7 @@ model Customer {
   email      String  @unique
   password   String? // Nullable karena bisa social login 
   fullName   String
+  phone      String?
   avatarUrl  String?
   isVerified Boolean @default(false) // Verifikasi email
 
