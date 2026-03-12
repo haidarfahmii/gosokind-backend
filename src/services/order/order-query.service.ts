@@ -4,6 +4,7 @@ import {
   GetAllOrdersQuery,
   OrderResponse,
   OrderListResponse,
+  NewOrderResponse,
 } from "../../@types/order.types";
 
 export const orderQueryService = {
@@ -179,7 +180,7 @@ export const orderQueryService = {
   async getOrdersByCustomer(
     customerId: string,
     query: GetAllOrdersQuery & { sortBy?: string; sortOrder?: string }, // Tambahan type untuk sort
-  ): Promise<OrderListResponse> {
+  ): Promise<{ orders: NewOrderResponse[]; pagination: { total: number; page: number; limit: number; totalPages: number } }> {
     const page = query.page || 1;
     const limit = query.limit || 5;
     const skip = (page - 1) * limit;
@@ -221,100 +222,25 @@ export const orderQueryService = {
       where,
       skip,
       take: limit,
-      include: {
-        customer: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-        address: {
-          select: {
-            id: true,
-            label: true,
-            address: true,
-            latitude: true,
-            longitude: true,
-          },
-        },
-        outlet: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-          },
-        },
-        pickupDriver: {
-          select: {
-            id: true,
-            fullName: true,
-          },
-        },
-        deliveryDriver: {
-          select: {
-            id: true,
-            fullName: true,
-          },
-        },
-        orderItems: {
-          include: {
-            laundryItem: {
-              select: {
-                id: true,
-                name: true,
-                category: true,
-                pricingType: true,
-              },
-            },
-          },
-        },
-        stationProcesses: {
-          include: {
-            worker: {
-              select: {
-                id: true,
-                fullName: true,
-              },
-            },
-            itemChecks: {
-              include: {
-                laundryItem: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            startedAt: "asc",
-          },
-        },
-      },
-      orderBy: orderBy, // PERBAIKAN 3: Gunakan variabel orderBy yang sudah kita buat
+      orderBy: orderBy,
+      select: {
+        id: true,
+        orderNumber: true,
+        totalWeight: true,
+        totalPrice: true,
+        status: true,
+        createdAt: true,
+      }
     });
 
     // Format response sesuai tipe data
-    const formattedOrders: OrderResponse[] = orders.map((order) => ({
+    const formattedOrders: NewOrderResponse[] = orders.map((order) => ({
       id: order.id,
       orderNumber: order.orderNumber,
       totalWeight: order.totalWeight,
       totalPrice: order.totalPrice,
-      isPaid: order.isPaid,
       status: order.status,
-      pickupAt: order.pickupAt,
-      customer: order.customer,
-      address: order.address,
-      outlet: order.outlet,
-      pickupDriver: order.pickupDriver,
-      deliveryDriver: order.deliveryDriver,
-      orderItems: order.orderItems,
-      stationProcesses: order.stationProcesses,
       createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
     }));
 
     return {
