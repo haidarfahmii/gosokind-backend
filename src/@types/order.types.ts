@@ -144,6 +144,15 @@ export interface OrderResponse {
   updatedAt: Date;
 }
 
+export interface NewOrderResponse {
+  id: string;
+  orderNumber: string;
+  totalWeight: number | null;
+  totalPrice: number | null;
+  status: OrderStatus;
+  createdAt: Date;
+}
+
 export interface BypassRequestResponse {
   id: string;
   order: {
